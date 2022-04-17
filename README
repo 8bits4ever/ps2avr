@@ -5,5 +5,5 @@ Original source: https://sourceforge.net/projects/ps2avr/
 avrlib libraries have been updated to be able to compile the binary.
 https://github.com/kcozens/avrlib-2014
 
-
+Navigate to "Source" folder and issue MAKE command to compile. You might need to install gcc compiler and other dev tools in your system
 
