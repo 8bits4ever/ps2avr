@@ -1,8 +1,9 @@
-Refer http://www.dribin.org/dave/keyboard/one_html/ to form a circuit.
+PS/2 implementation on Atmega32 micro.Circuit schematic available
 
-APPENDIX 1. Avrdude Script
+Original source: https://sourceforge.net/projects/ps2avr/
 
-	avrdude -c stk500v2 -P com3 -p atmega16 -U hfuse:w:0xD7:m -U lfuse:w:0x0E:m
-	avrdude -c stk500v2 -P com3 -p atmega16 -U flash:w:keymain.hex:i
+avrlib libraries have been updated to be able to compile the binary.
+https://github.com/kcozens/avrlib-2014
 
-	Please change [stk500v2], [com3] with your isp-loader preference.
+
+
