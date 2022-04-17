@@ -1,0 +1,2236 @@
+GAS LISTING /var/tmp//ccuNnCCL.s 			page 1
+
+
+   1               		.file	"keysta.c"
+   2               	__SP_H__ = 0x3e
+   3               	__SP_L__ = 0x3d
+   4               	__SREG__ = 0x3f
+   5               	__tmp_reg__ = 0
+   6               	__zero_reg__ = 1
+   7               		.text
+   8               	.Ltext0:
+   9               		.cfi_sections	.debug_frame
+  10               		.type	clockHigh, @function
+  11               	clockHigh:
+  12               	.LFB0:
+  13               		.file 1 "keysta.c"
+   1:keysta.c      **** /* Copyright Jamie Honan, 2001.  Distributed under the GPL.
+   2:keysta.c      ****    This program comes with ABSOLUTELY NO WARRANTY.
+   3:keysta.c      ****    See the file COPYING for license details. */
+   4:keysta.c      **** 
+   5:keysta.c      **** #include <avr/io.h>
+   6:keysta.c      **** #include <avr/interrupt.h>
+   7:keysta.c      **** 
+   8:keysta.c      **** #include "global.h"
+   9:keysta.c      **** #include "timer.h"
+  10:keysta.c      **** #include "common_inc.h"
+  11:keysta.c      **** #include "keysta.h"
+  12:keysta.c      **** 
+  13:keysta.c      **** /* This is the ISR which handles the keyboard communication
+  14:keysta.c      ****    between the host and the keyboard emulator. The interface
+  15:keysta.c      ****    routines and flag bits are commented in keysta.h
+  16:keysta.c      **** 
+  17:keysta.c      ****    This routine must drive and read the clock and data signals.
+  18:keysta.c      **** 
+  19:keysta.c      ****    Change the following few lines if you are driving your processor
+  20:keysta.c      ****    with a different crystal to 4 Mhz. Also if you wich to use different
+  21:keysta.c      ****    pins to those given here.
+  22:keysta.c      **** 
+  23:keysta.c      ****    Note that care should be take with oither routines that
+  24:keysta.c      ****    set DDR registers, or pin out registers that share the ports
+  25:keysta.c      ****    that are used here.
+  26:keysta.c      **** 
+  27:keysta.c      ****    Basically, you should do an in then out. In certain circumstances
+  28:keysta.c      ****    this read - modify - write cycle should be protected by disabling interrupts.
+  29:keysta.c      **** 
+  30:keysta.c      ****    Also, there is a facility for disabling the keyboard emulator
+  31:keysta.c      ****    unless a pin is held down (see DISDEBUG ifdefs below). This allows
+  32:keysta.c      ****    your keyboard cable to be pass through until you tie this pin down */
+  33:keysta.c      **** 
+  34:keysta.c      **** #define COUNT_UP	(256 - ((33 * CYCLES_PER_US)/8))
+  35:keysta.c      **** 
+  36:keysta.c      **** static void timerAction(void);
+  37:keysta.c      **** 
+  38:keysta.c      **** static void clockHigh(void)
+  39:keysta.c      **** {
+  14               		.loc 1 39 1 view -0
+  15               		.cfi_startproc
+  16               	/* prologue: function */
+  17               	/* frame size = 0 */
+  18               	/* stack size = 0 */
+GAS LISTING /var/tmp//ccuNnCCL.s 			page 2
+
+
+  19               	.L__stack_usage = 0
+  40:keysta.c      **** 	cbi(KEYB_CLOCK_DDR, KEYB_CLOCK_PIN); // set as input
+  20               		.loc 1 40 2 view .LVU1
+  21 0000 8A98      		cbi 0x11,2
+  41:keysta.c      **** 	sbi(KEYB_CLOCK_PORT, KEYB_CLOCK_PIN); // set pullup
+  22               		.loc 1 41 2 view .LVU2
+  23 0002 929A      		sbi 0x12,2
+  24               	/* epilogue start */
+  42:keysta.c      **** }
+  25               		.loc 1 42 1 is_stmt 0 view .LVU3
+  26 0004 0895      		ret
+  27               		.cfi_endproc
+  28               	.LFE0:
+  29               		.size	clockHigh, .-clockHigh
+  30               		.type	clockLow, @function
+  31               	clockLow:
+  32               	.LFB1:
+  43:keysta.c      **** 
+  44:keysta.c      **** static void clockLow(void)
+  45:keysta.c      **** {
+  33               		.loc 1 45 1 is_stmt 1 view -0
+  34               		.cfi_startproc
+  35               	/* prologue: function */
+  36               	/* frame size = 0 */
+  37               	/* stack size = 0 */
+  38               	.L__stack_usage = 0
+  46:keysta.c      **** 	cbi(KEYB_CLOCK_PORT, KEYB_CLOCK_PIN); // zero output value
+  39               		.loc 1 46 2 view .LVU5
+  40 0006 9298      		cbi 0x12,2
+  47:keysta.c      **** 	sbi(KEYB_CLOCK_DDR, KEYB_CLOCK_PIN); // set as output
+  41               		.loc 1 47 2 view .LVU6
+  42 0008 8A9A      		sbi 0x11,2
+  43               	/* epilogue start */
+  48:keysta.c      **** }
+  44               		.loc 1 48 1 is_stmt 0 view .LVU7
+  45 000a 0895      		ret
+  46               		.cfi_endproc
+  47               	.LFE1:
+  48               		.size	clockLow, .-clockLow
+  49               		.type	dataHigh, @function
+  50               	dataHigh:
+  51               	.LFB2:
+  49:keysta.c      **** 
+  50:keysta.c      **** static void dataHigh(void)
+  51:keysta.c      **** {
+  52               		.loc 1 51 1 is_stmt 1 view -0
+  53               		.cfi_startproc
+  54               	/* prologue: function */
+  55               	/* frame size = 0 */
+  56               	/* stack size = 0 */
+  57               	.L__stack_usage = 0
+  52:keysta.c      **** 	cbi(KEYB_DATA_DDR, KEYB_DATA_PIN); // set as input
+  58               		.loc 1 52 2 view .LVU9
+  59 000c 8B98      		cbi 0x11,3
+  53:keysta.c      **** 	sbi(KEYB_DATA_PORT, KEYB_DATA_PIN); // set pullup
+  60               		.loc 1 53 2 view .LVU10
+  61 000e 939A      		sbi 0x12,3
+GAS LISTING /var/tmp//ccuNnCCL.s 			page 3
+
+
+  62               	/* epilogue start */
+  54:keysta.c      **** }
+  63               		.loc 1 54 1 is_stmt 0 view .LVU11
+  64 0010 0895      		ret
+  65               		.cfi_endproc
+  66               	.LFE2:
+  67               		.size	dataHigh, .-dataHigh
+  68               		.type	dataLow, @function
+  69               	dataLow:
+  70               	.LFB3:
+  55:keysta.c      **** 
+  56:keysta.c      **** static void dataLow(void)
+  57:keysta.c      **** {
+  71               		.loc 1 57 1 is_stmt 1 view -0
+  72               		.cfi_startproc
+  73               	/* prologue: function */
+  74               	/* frame size = 0 */
+  75               	/* stack size = 0 */
+  76               	.L__stack_usage = 0
+  58:keysta.c      **** 	cbi(KEYB_DATA_PORT, KEYB_DATA_PIN); // zero output value
+  77               		.loc 1 58 2 view .LVU13
+  78 0012 9398      		cbi 0x12,3
+  59:keysta.c      **** 	sbi(KEYB_DATA_DDR, KEYB_DATA_PIN); // set as output
+  79               		.loc 1 59 2 view .LVU14
+  80 0014 8B9A      		sbi 0x11,3
+  81               	/* epilogue start */
+  60:keysta.c      **** }
+  82               		.loc 1 60 1 is_stmt 0 view .LVU15
+  83 0016 0895      		ret
+  84               		.cfi_endproc
+  85               	.LFE3:
+  86               		.size	dataLow, .-dataLow
+  87               		.type	timerAction, @function
+  88               	timerAction:
+  89               	.LFB7:
+  61:keysta.c      **** 
+  62:keysta.c      **** #define readClockPin() (KEYB_CLOCK_PINS & KEYB_CLOCK_BIT)
+  63:keysta.c      **** #define readDataPin() (KEYB_DATA_PINS & KEYB_DATA_BIT)
+  64:keysta.c      **** 
+  65:keysta.c      **** volatile unsigned char	kbd_flags;
+  66:keysta.c      **** 
+  67:keysta.c      **** enum enum_state { IDLE_START = 0, IDLE_WAIT_REL, 
+  68:keysta.c      **** 	IDLE_OK_TO_TX, IDLE_END,
+  69:keysta.c      **** 
+  70:keysta.c      **** 	RX_START = IDLE_END+10, RX_RELCLK, RX_DATA0,
+  71:keysta.c      **** 	RX_DATA1, RX_DATA2, RX_DATA3, RX_DATA4,
+  72:keysta.c      **** 	RX_DATA5, RX_DATA6, RX_DATA7,
+  73:keysta.c      **** 	RX_PARITY, RX_STOP, RX_SENT_ACK, RX_END,
+  74:keysta.c      **** 
+  75:keysta.c      **** 	TX_START = RX_END+10, 
+  76:keysta.c      **** 	TX_DATA1, TX_DATA2, TX_DATA3, TX_DATA4,
+  77:keysta.c      **** 	TX_DATA5, TX_DATA6, TX_DATA7,
+  78:keysta.c      **** 	TX_PARITY, TX_STOP, TX_AFTER_STOP, TX_END } ;
+  79:keysta.c      **** 
+  80:keysta.c      **** volatile unsigned char kbd_state;
+  81:keysta.c      **** 
+  82:keysta.c      **** static volatile unsigned char	rx_byte;
+GAS LISTING /var/tmp//ccuNnCCL.s 			page 4
+
+
+  83:keysta.c      **** static volatile unsigned char	tx_byte;
+  84:keysta.c      **** static volatile unsigned char	tx_shift;
+  85:keysta.c      **** static volatile unsigned char	parity;
+  86:keysta.c      **** 
+  87:keysta.c      **** void
+  88:keysta.c      **** kbd_init(void)
+  89:keysta.c      **** {
+  90:keysta.c      **** 	kbd_state = IDLE_START;
+  91:keysta.c      **** 	kbd_flags = FLA_CLOCK_HIGH | FLA_TX_OK;
+  92:keysta.c      **** 
+  93:keysta.c      **** 	clockHigh();
+  94:keysta.c      **** 	dataHigh();
+  95:keysta.c      **** 
+  96:keysta.c      **** 	timer2Init();
+  97:keysta.c      **** 	timer2SetPrescaler(TIMER_CLK_DIV8);
+  98:keysta.c      **** 	timerAttach(TIMER2OVERFLOW_INT, timerAction);
+  99:keysta.c      **** 	outp(COUNT_UP, TCNT2);	/* value counts up from this to zero */
+ 100:keysta.c      **** }
+ 101:keysta.c      **** 
+ 102:keysta.c      **** 	void
+ 103:keysta.c      **** kbd_set_tx(unsigned char txchar)
+ 104:keysta.c      **** {
+ 105:keysta.c      **** 	tx_byte = txchar;
+ 106:keysta.c      **** 	cli();
+ 107:keysta.c      **** 	kbd_flags &= ~FLA_TX_OK;
+ 108:keysta.c      **** 	kbd_flags |= FLA_TX_BYTE;
+ 109:keysta.c      **** 	sei();
+ 110:keysta.c      **** }
+ 111:keysta.c      **** 
+ 112:keysta.c      **** 	unsigned char 
+ 113:keysta.c      **** kbd_get_rx_char(void)
+ 114:keysta.c      **** {
+ 115:keysta.c      **** 	cli();
+ 116:keysta.c      **** 	kbd_flags &= ~FLA_RX_BYTE;
+ 117:keysta.c      **** 	sei();
+ 118:keysta.c      **** 	return rx_byte;
+ 119:keysta.c      **** }
+ 120:keysta.c      **** 
+ 121:keysta.c      **** static void timerAction(void)
+ 122:keysta.c      **** {
+  90               		.loc 1 122 1 is_stmt 1 view -0
+  91               		.cfi_startproc
+  92               	/* prologue: function */
+  93               	/* frame size = 0 */
+  94               	/* stack size = 0 */
+  95               	.L__stack_usage = 0
+ 123:keysta.c      **** 	/* restart timer */
+ 124:keysta.c      **** 	outp(COUNT_UP, TCNT2);	/* value counts up from this to zero */
+  96               		.loc 1 124 2 view .LVU17
+  97 0018 8FEC      		ldi r24,lo8(-49)
+  98 001a 84BD      		out 0x24,r24
+ 125:keysta.c      **** 
+ 126:keysta.c      **** 	if (kbd_state < IDLE_END) { // start, wait_rel or ready to tx
+  99               		.loc 1 126 2 view .LVU18
+ 100               		.loc 1 126 16 is_stmt 0 view .LVU19
+ 101 001c 8091 0000 		lds r24,kbd_state
+ 102               		.loc 1 126 5 view .LVU20
+GAS LISTING /var/tmp//ccuNnCCL.s 			page 5
+
+
+ 103 0020 8330      		cpi r24,lo8(3)
+ 104 0022 00F4      		brsh .L6
+ 127:keysta.c      **** 		dataHigh();
+ 105               		.loc 1 127 3 is_stmt 1 view .LVU21
+ 106 0024 0E94 0000 		call dataHigh
+ 107               	.LVL0:
+ 128:keysta.c      **** 		if (!(kbd_flags & FLA_CLOCK_HIGH)) {
+ 108               		.loc 1 128 3 view .LVU22
+ 109               		.loc 1 128 19 is_stmt 0 view .LVU23
+ 110 0028 8091 0000 		lds r24,kbd_flags
+ 111               		.loc 1 128 6 view .LVU24
+ 112 002c 80FD      		sbrc r24,0
+ 113 002e 00C0      		rjmp .L7
+ 114               	.L49:
+ 129:keysta.c      **** 			kbd_flags |= FLA_CLOCK_HIGH;
+ 130:keysta.c      **** 			clockHigh();
+ 131:keysta.c      **** 			return;
+ 132:keysta.c      **** 		}
+ 133:keysta.c      **** 		/* if clock held low, then we must prepare to start rxing */
+ 134:keysta.c      **** 		if (!readClockPin()) {
+ 135:keysta.c      **** 			kbd_state = IDLE_WAIT_REL;
+ 136:keysta.c      **** 			return;
+ 137:keysta.c      **** 		}
+ 138:keysta.c      **** 		switch(kbd_state) {
+ 139:keysta.c      **** 			case IDLE_START:
+ 140:keysta.c      **** 				kbd_state = IDLE_OK_TO_TX;
+ 141:keysta.c      **** 				return;
+ 142:keysta.c      **** 			case IDLE_WAIT_REL:
+ 143:keysta.c      **** 				if (!readDataPin()) {
+ 144:keysta.c      **** 					/* PC wants to transmit */
+ 145:keysta.c      **** 					kbd_state = RX_START;
+ 146:keysta.c      **** 					return;
+ 147:keysta.c      **** 				}
+ 148:keysta.c      **** 				/* just an ack or something */
+ 149:keysta.c      **** 				kbd_state = IDLE_OK_TO_TX;
+ 150:keysta.c      **** 				return;
+ 151:keysta.c      **** 			case IDLE_OK_TO_TX:
+ 152:keysta.c      **** 				if (kbd_flags & FLA_TX_BYTE) {
+ 153:keysta.c      **** 					dataLow();
+ 154:keysta.c      **** 					kbd_state = TX_START;
+ 155:keysta.c      **** 				}
+ 156:keysta.c      **** 				return;
+ 157:keysta.c      **** 		}
+ 158:keysta.c      **** 		return;
+ 159:keysta.c      **** 	} else // end < IDLE_END
+ 160:keysta.c      **** 		if (kbd_state < RX_END) {
+ 161:keysta.c      **** 			if (!(kbd_flags & FLA_CLOCK_HIGH)) {
+ 162:keysta.c      **** 				kbd_flags |= FLA_CLOCK_HIGH;
+ 115               		.loc 1 162 5 is_stmt 1 view .LVU25
+ 116               		.loc 1 162 15 is_stmt 0 view .LVU26
+ 117 0030 8091 0000 		lds r24,kbd_flags
+ 118 0034 8160      		ori r24,lo8(1)
+ 119 0036 8093 0000 		sts kbd_flags,r24
+ 163:keysta.c      **** 				clockHigh();
+ 120               		.loc 1 163 5 is_stmt 1 view .LVU27
+ 121 003a 0C94 0000 		jmp clockHigh
+ 122               	.LVL1:
+GAS LISTING /var/tmp//ccuNnCCL.s 			page 6
+
+
+ 123               	.L7:
+ 134:keysta.c      **** 			kbd_state = IDLE_WAIT_REL;
+ 124               		.loc 1 134 3 view .LVU28
+ 134:keysta.c      **** 			kbd_state = IDLE_WAIT_REL;
+ 125               		.loc 1 134 6 is_stmt 0 view .LVU29
+ 126 003e 8299      		sbic 0x10,2
+ 127 0040 00C0      		rjmp .L8
+ 128               	.L52:
+ 164:keysta.c      **** 				return;
+ 165:keysta.c      **** 			}
+ 166:keysta.c      **** 			/* at this point clock is high in preparation to going low */
+ 167:keysta.c      **** 			if (!readClockPin()) {
+ 168:keysta.c      **** 				/* PC is still holding clock down */
+ 169:keysta.c      **** 				dataHigh();
+ 170:keysta.c      **** 				kbd_state = IDLE_WAIT_REL;
+ 171:keysta.c      **** 				return;
+ 172:keysta.c      **** 			}
+ 173:keysta.c      **** 			switch(kbd_state) {
+ 174:keysta.c      **** 				case RX_START:
+ 175:keysta.c      **** 					/* PC has released clock line */
+ 176:keysta.c      **** 					/* we keep it high for a good half cycle */
+ 177:keysta.c      **** 					kbd_flags &= ~FLA_RX_BAD;
+ 178:keysta.c      **** 					kbd_state++;
+ 179:keysta.c      **** 					return;
+ 180:keysta.c      **** 				case RX_RELCLK:
+ 181:keysta.c      **** 					/* now PC has seen clock high, show it some low */
+ 182:keysta.c      **** 					break;
+ 183:keysta.c      **** 				case RX_DATA0:
+ 184:keysta.c      **** 					kbd_flags &= ~FLA_RX_BYTE;
+ 185:keysta.c      **** 					if (readDataPin()) {
+ 186:keysta.c      **** 						rx_byte = 0x80;
+ 187:keysta.c      **** 						parity = 1;
+ 188:keysta.c      **** 					} else {
+ 189:keysta.c      **** 						parity = 0;
+ 190:keysta.c      **** 						rx_byte = 0;
+ 191:keysta.c      **** 					}
+ 192:keysta.c      **** 					break; /* end clk hi 1 */
+ 193:keysta.c      **** 				case RX_DATA1: 
+ 194:keysta.c      **** 				case RX_DATA2: 
+ 195:keysta.c      **** 				case RX_DATA3: 
+ 196:keysta.c      **** 				case RX_DATA4: 
+ 197:keysta.c      **** 				case RX_DATA5: 
+ 198:keysta.c      **** 				case RX_DATA6: 
+ 199:keysta.c      **** 				case RX_DATA7: 
+ 200:keysta.c      **** 					rx_byte >>= 1;
+ 201:keysta.c      **** 					if (readDataPin()) {
+ 202:keysta.c      **** 						rx_byte |= 0x80;
+ 203:keysta.c      **** 						parity++;
+ 204:keysta.c      **** 					}
+ 205:keysta.c      **** 					break; /* end clk hi 2 to 8 */
+ 206:keysta.c      **** 				case RX_PARITY: 
+ 207:keysta.c      **** 					if (readDataPin()) {
+ 208:keysta.c      **** 						parity++;
+ 209:keysta.c      **** 					}
+ 210:keysta.c      **** 					if (!(parity & 1)) {
+ 211:keysta.c      **** 						/* faulty, not odd parity */
+ 212:keysta.c      **** 						kbd_flags |= FLA_RX_BAD;
+GAS LISTING /var/tmp//ccuNnCCL.s 			page 7
+
+
+ 213:keysta.c      **** 					}
+ 214:keysta.c      **** 					break; /* end clk hi 9 */
+ 215:keysta.c      **** 				case RX_STOP: 
+ 216:keysta.c      **** 					if (!readDataPin()) {
+ 217:keysta.c      **** 						/* if stop bit not seen */
+ 218:keysta.c      **** 						kbd_flags |= FLA_RX_BAD;
+ 219:keysta.c      **** 					}
+ 220:keysta.c      **** 					if (!(kbd_flags & FLA_RX_BAD)) {
+ 221:keysta.c      **** 						dataLow();
+ 222:keysta.c      **** 						kbd_flags |= FLA_RX_BYTE;
+ 223:keysta.c      **** 					}
+ 224:keysta.c      **** 					break; /* end clk hi 10 */
+ 225:keysta.c      **** 				case RX_SENT_ACK: 
+ 226:keysta.c      **** 					dataHigh();
+ 227:keysta.c      **** 					kbd_state = IDLE_START;
+ 228:keysta.c      **** 					/* remains in clk hi 11 */
+ 229:keysta.c      **** 					return;
+ 230:keysta.c      **** 			}
+ 231:keysta.c      **** 			clockLow();
+ 232:keysta.c      **** 			kbd_flags &= ~(FLA_CLOCK_HIGH);
+ 233:keysta.c      **** 			kbd_state++;
+ 234:keysta.c      **** 			return;
+ 235:keysta.c      **** 		} else // end < RX_END
+ 236:keysta.c      **** 			if (kbd_state < TX_END) {
+ 237:keysta.c      **** 				if (kbd_flags & FLA_CLOCK_HIGH) {
+ 238:keysta.c      **** 					if (!readClockPin()) {
+ 239:keysta.c      **** 						/* PC is still holding clock down */
+ 240:keysta.c      **** 						dataHigh();
+ 241:keysta.c      **** 						kbd_state = IDLE_WAIT_REL;
+ 129               		.loc 1 241 7 is_stmt 1 view .LVU30
+ 130               		.loc 1 241 17 is_stmt 0 view .LVU31
+ 131 0042 81E0      		ldi r24,lo8(1)
+ 132 0044 00C0      		rjmp .L50
+ 133               	.L8:
+ 138:keysta.c      **** 			case IDLE_START:
+ 134               		.loc 1 138 3 is_stmt 1 view .LVU32
+ 135 0046 8091 0000 		lds r24,kbd_state
+ 136 004a 8130      		cpi r24,lo8(1)
+ 137 004c 01F0      		breq .L10
+ 138 004e 8230      		cpi r24,lo8(2)
+ 139 0050 01F0      		breq .L11
+ 140 0052 8111      		cpse r24,__zero_reg__
+ 141 0054 00C0      		rjmp .L5
+ 142               	.L12:
+ 149:keysta.c      **** 				return;
+ 143               		.loc 1 149 5 view .LVU33
+ 149:keysta.c      **** 				return;
+ 144               		.loc 1 149 15 is_stmt 0 view .LVU34
+ 145 0056 82E0      		ldi r24,lo8(2)
+ 146 0058 00C0      		rjmp .L50
+ 147               	.L10:
+ 143:keysta.c      **** 					/* PC wants to transmit */
+ 148               		.loc 1 143 5 is_stmt 1 view .LVU35
+ 143:keysta.c      **** 					/* PC wants to transmit */
+ 149               		.loc 1 143 8 is_stmt 0 view .LVU36
+ 150 005a 8399      		sbic 0x10,3
+ 151 005c 00C0      		rjmp .L12
+GAS LISTING /var/tmp//ccuNnCCL.s 			page 8
+
+
+ 145:keysta.c      **** 					return;
+ 152               		.loc 1 145 6 is_stmt 1 view .LVU37
+ 145:keysta.c      **** 					return;
+ 153               		.loc 1 145 16 is_stmt 0 view .LVU38
+ 154 005e 8DE0      		ldi r24,lo8(13)
+ 155               	.L50:
+ 242:keysta.c      **** 						return;
+ 243:keysta.c      **** 					}
+ 244:keysta.c      **** 					kbd_flags &= ~FLA_CLOCK_HIGH;
+ 245:keysta.c      **** 					clockLow();
+ 246:keysta.c      **** 					return;
+ 247:keysta.c      **** 				}
+ 248:keysta.c      **** 
+ 249:keysta.c      **** 				/* at this point clock is low in preparation to going high */
+ 250:keysta.c      **** 				kbd_flags |= FLA_CLOCK_HIGH;
+ 251:keysta.c      **** 				clockHigh();
+ 252:keysta.c      **** 				switch(kbd_state) {
+ 253:keysta.c      **** 					case TX_START:
+ 254:keysta.c      **** 						tx_shift = tx_byte;
+ 255:keysta.c      **** 						parity = 0;
+ 256:keysta.c      **** 					case TX_DATA1: 
+ 257:keysta.c      **** 					case TX_DATA2: 
+ 258:keysta.c      **** 					case TX_DATA3: 
+ 259:keysta.c      **** 					case TX_DATA4:
+ 260:keysta.c      **** 					case TX_DATA5: 
+ 261:keysta.c      **** 					case TX_DATA6: 
+ 262:keysta.c      **** 					case TX_DATA7:
+ 263:keysta.c      **** 						if (tx_shift & 1) {
+ 264:keysta.c      **** 							dataHigh();
+ 265:keysta.c      **** 							parity++;
+ 266:keysta.c      **** 						} else {
+ 267:keysta.c      **** 							dataLow();
+ 268:keysta.c      **** 						}
+ 269:keysta.c      **** 						tx_shift >>= 1;
+ 270:keysta.c      **** 						break; /* clock hi 1 to 8 */
+ 271:keysta.c      **** 
+ 272:keysta.c      **** 					case TX_PARITY: 
+ 273:keysta.c      **** 						if (parity & 1) {
+ 274:keysta.c      **** 							dataLow();
+ 275:keysta.c      **** 						} else {
+ 276:keysta.c      **** 							dataHigh();
+ 277:keysta.c      **** 						}
+ 278:keysta.c      **** 						kbd_flags &= ~FLA_TX_BYTE;
+ 279:keysta.c      **** 						kbd_flags |= FLA_TX_OK;
+ 280:keysta.c      **** 						break; /* clock hi 9 */
+ 281:keysta.c      **** 					case TX_STOP: 
+ 282:keysta.c      **** 						dataHigh();
+ 283:keysta.c      **** 						break; /* clock hi 10 */
+ 284:keysta.c      **** 					case TX_AFTER_STOP:
+ 285:keysta.c      **** 						kbd_state = IDLE_START;
+ 286:keysta.c      **** 						/* remains in clk hi 11 */
+ 287:keysta.c      **** 						return;
+ 288:keysta.c      **** 				}
+ 289:keysta.c      **** 				kbd_state++;
+ 156               		.loc 1 289 14 view .LVU39
+ 157 0060 8093 0000 		sts kbd_state,r24
+ 158               	.L5:
+GAS LISTING /var/tmp//ccuNnCCL.s 			page 9
+
+
+ 159               	/* epilogue start */
+ 290:keysta.c      **** 
+ 291:keysta.c      **** 			} //else
+ 292:keysta.c      **** 
+ 293:keysta.c      **** }
+ 160               		.loc 1 293 1 view .LVU40
+ 161 0064 0895      		ret
+ 162               	.L11:
+ 152:keysta.c      **** 					dataLow();
+ 163               		.loc 1 152 5 is_stmt 1 view .LVU41
+ 152:keysta.c      **** 					dataLow();
+ 164               		.loc 1 152 19 is_stmt 0 view .LVU42
+ 165 0066 8091 0000 		lds r24,kbd_flags
+ 152:keysta.c      **** 					dataLow();
+ 166               		.loc 1 152 8 view .LVU43
+ 167 006a 83FF      		sbrs r24,3
+ 168 006c 00C0      		rjmp .L5
+ 153:keysta.c      **** 					kbd_state = TX_START;
+ 169               		.loc 1 153 6 is_stmt 1 view .LVU44
+ 170 006e 0E94 0000 		call dataLow
+ 171               	.LVL2:
+ 154:keysta.c      **** 				}
+ 172               		.loc 1 154 6 view .LVU45
+ 154:keysta.c      **** 				}
+ 173               		.loc 1 154 16 is_stmt 0 view .LVU46
+ 174 0072 84E2      		ldi r24,lo8(36)
+ 175 0074 00C0      		rjmp .L50
+ 176               	.L6:
+ 160:keysta.c      **** 			if (!(kbd_flags & FLA_CLOCK_HIGH)) {
+ 177               		.loc 1 160 3 is_stmt 1 view .LVU47
+ 160:keysta.c      **** 			if (!(kbd_flags & FLA_CLOCK_HIGH)) {
+ 178               		.loc 1 160 17 is_stmt 0 view .LVU48
+ 179 0076 8091 0000 		lds r24,kbd_state
+ 160:keysta.c      **** 			if (!(kbd_flags & FLA_CLOCK_HIGH)) {
+ 180               		.loc 1 160 6 view .LVU49
+ 181 007a 8A31      		cpi r24,lo8(26)
+ 182 007c 00F0      		brlo .+2
+ 183 007e 00C0      		rjmp .L14
+ 161:keysta.c      **** 				kbd_flags |= FLA_CLOCK_HIGH;
+ 184               		.loc 1 161 4 is_stmt 1 view .LVU50
+ 161:keysta.c      **** 				kbd_flags |= FLA_CLOCK_HIGH;
+ 185               		.loc 1 161 20 is_stmt 0 view .LVU51
+ 186 0080 8091 0000 		lds r24,kbd_flags
+ 161:keysta.c      **** 				kbd_flags |= FLA_CLOCK_HIGH;
+ 187               		.loc 1 161 7 view .LVU52
+ 188 0084 80FF      		sbrs r24,0
+ 189 0086 00C0      		rjmp .L49
+ 167:keysta.c      **** 				/* PC is still holding clock down */
+ 190               		.loc 1 167 4 is_stmt 1 view .LVU53
+ 167:keysta.c      **** 				/* PC is still holding clock down */
+ 191               		.loc 1 167 7 is_stmt 0 view .LVU54
+ 192 0088 8299      		sbic 0x10,2
+ 193 008a 00C0      		rjmp .L16
+ 194               	.L53:
+ 240:keysta.c      **** 						kbd_state = IDLE_WAIT_REL;
+ 195               		.loc 1 240 7 is_stmt 1 view .LVU55
+ 196 008c 0E94 0000 		call dataHigh
+GAS LISTING /var/tmp//ccuNnCCL.s 			page 10
+
+
+ 197               	.LVL3:
+ 198 0090 00C0      		rjmp .L52
+ 199               	.L16:
+ 173:keysta.c      **** 				case RX_START:
+ 200               		.loc 1 173 4 view .LVU56
+ 201 0092 8091 0000 		lds r24,kbd_state
+ 202 0096 8731      		cpi r24,lo8(23)
+ 203 0098 01F0      		breq .L17
+ 204 009a 00F4      		brsh .L18
+ 205 009c 8F30      		cpi r24,lo8(15)
+ 206 009e 01F0      		breq .L19
+ 207 00a0 00F4      		brsh .L20
+ 208 00a2 8D30      		cpi r24,lo8(13)
+ 209 00a4 01F0      		breq .L21
+ 210               	.L22:
+ 231:keysta.c      **** 			kbd_flags &= ~(FLA_CLOCK_HIGH);
+ 211               		.loc 1 231 4 view .LVU57
+ 212 00a6 0E94 0000 		call clockLow
+ 213               	.LVL4:
+ 232:keysta.c      **** 			kbd_state++;
+ 214               		.loc 1 232 4 view .LVU58
+ 232:keysta.c      **** 			kbd_state++;
+ 215               		.loc 1 232 14 is_stmt 0 view .LVU59
+ 216 00aa 8091 0000 		lds r24,kbd_flags
+ 217 00ae 8E7F      		andi r24,lo8(-2)
+ 218 00b0 00C0      		rjmp .L51
+ 219               	.L20:
+ 200:keysta.c      **** 					if (readDataPin()) {
+ 220               		.loc 1 200 6 is_stmt 1 view .LVU60
+ 200:keysta.c      **** 					if (readDataPin()) {
+ 221               		.loc 1 200 14 is_stmt 0 view .LVU61
+ 222 00b2 8091 0000 		lds r24,rx_byte
+ 223 00b6 8695      		lsr r24
+ 224 00b8 8093 0000 		sts rx_byte,r24
+ 201:keysta.c      **** 						rx_byte |= 0x80;
+ 225               		.loc 1 201 6 is_stmt 1 view .LVU62
+ 201:keysta.c      **** 						rx_byte |= 0x80;
+ 226               		.loc 1 201 9 is_stmt 0 view .LVU63
+ 227 00bc 839B      		sbis 0x10,3
+ 228 00be 00C0      		rjmp .L22
+ 202:keysta.c      **** 						parity++;
+ 229               		.loc 1 202 7 is_stmt 1 view .LVU64
+ 202:keysta.c      **** 						parity++;
+ 230               		.loc 1 202 15 is_stmt 0 view .LVU65
+ 231 00c0 8091 0000 		lds r24,rx_byte
+ 232 00c4 8068      		ori r24,lo8(-128)
+ 233 00c6 8093 0000 		sts rx_byte,r24
+ 203:keysta.c      **** 					}
+ 234               		.loc 1 203 7 is_stmt 1 view .LVU66
+ 203:keysta.c      **** 					}
+ 235               		.loc 1 203 13 is_stmt 0 view .LVU67
+ 236 00ca 8091 0000 		lds r24,parity
+ 237 00ce 8F5F      		subi r24,lo8(-(1))
+ 238 00d0 00C0      		rjmp .L48
+ 239               	.L18:
+ 173:keysta.c      **** 				case RX_START:
+ 240               		.loc 1 173 4 view .LVU68
+GAS LISTING /var/tmp//ccuNnCCL.s 			page 11
+
+
+ 241 00d2 8831      		cpi r24,lo8(24)
+ 242 00d4 01F0      		breq .L25
+ 243 00d6 8931      		cpi r24,lo8(25)
+ 244 00d8 01F4      		brne .L22
+ 226:keysta.c      **** 					kbd_state = IDLE_START;
+ 245               		.loc 1 226 6 is_stmt 1 view .LVU69
+ 246 00da 0E94 0000 		call dataHigh
+ 247               	.LVL5:
+ 227:keysta.c      **** 					/* remains in clk hi 11 */
+ 248               		.loc 1 227 6 view .LVU70
+ 249               	.L39:
+ 285:keysta.c      **** 						/* remains in clk hi 11 */
+ 250               		.loc 1 285 7 view .LVU71
+ 285:keysta.c      **** 						/* remains in clk hi 11 */
+ 251               		.loc 1 285 17 is_stmt 0 view .LVU72
+ 252 00de 1092 0000 		sts kbd_state,__zero_reg__
+ 287:keysta.c      **** 				}
+ 253               		.loc 1 287 7 is_stmt 1 view .LVU73
+ 254 00e2 0895      		ret
+ 255               	.L21:
+ 177:keysta.c      **** 					kbd_state++;
+ 256               		.loc 1 177 6 view .LVU74
+ 177:keysta.c      **** 					kbd_state++;
+ 257               		.loc 1 177 16 is_stmt 0 view .LVU75
+ 258 00e4 8091 0000 		lds r24,kbd_flags
+ 259 00e8 8D7F      		andi r24,lo8(-3)
+ 260               	.L51:
+ 279:keysta.c      **** 						break; /* clock hi 9 */
+ 261               		.loc 1 279 17 view .LVU76
+ 262 00ea 8093 0000 		sts kbd_flags,r24
+ 280:keysta.c      **** 					case TX_STOP: 
+ 263               		.loc 1 280 7 is_stmt 1 view .LVU77
+ 264 00ee 00C0      		rjmp .L36
+ 265               	.L19:
+ 184:keysta.c      **** 					if (readDataPin()) {
+ 266               		.loc 1 184 6 view .LVU78
+ 184:keysta.c      **** 					if (readDataPin()) {
+ 267               		.loc 1 184 16 is_stmt 0 view .LVU79
+ 268 00f0 8091 0000 		lds r24,kbd_flags
+ 269 00f4 8B7F      		andi r24,lo8(-5)
+ 270 00f6 8093 0000 		sts kbd_flags,r24
+ 185:keysta.c      **** 						rx_byte = 0x80;
+ 271               		.loc 1 185 6 is_stmt 1 view .LVU80
+ 185:keysta.c      **** 						rx_byte = 0x80;
+ 272               		.loc 1 185 9 is_stmt 0 view .LVU81
+ 273 00fa 839B      		sbis 0x10,3
+ 274 00fc 00C0      		rjmp .L27
+ 186:keysta.c      **** 						parity = 1;
+ 275               		.loc 1 186 7 is_stmt 1 view .LVU82
+ 186:keysta.c      **** 						parity = 1;
+ 276               		.loc 1 186 15 is_stmt 0 view .LVU83
+ 277 00fe 80E8      		ldi r24,lo8(-128)
+ 278 0100 8093 0000 		sts rx_byte,r24
+ 187:keysta.c      **** 					} else {
+ 279               		.loc 1 187 7 is_stmt 1 view .LVU84
+ 187:keysta.c      **** 					} else {
+ 280               		.loc 1 187 14 is_stmt 0 view .LVU85
+GAS LISTING /var/tmp//ccuNnCCL.s 			page 12
+
+
+ 281 0104 81E0      		ldi r24,lo8(1)
+ 282               	.L48:
+ 203:keysta.c      **** 					}
+ 283               		.loc 1 203 13 view .LVU86
+ 284 0106 8093 0000 		sts parity,r24
+ 285 010a 00C0      		rjmp .L22
+ 286               	.L27:
+ 189:keysta.c      **** 						rx_byte = 0;
+ 287               		.loc 1 189 7 is_stmt 1 view .LVU87
+ 189:keysta.c      **** 						rx_byte = 0;
+ 288               		.loc 1 189 14 is_stmt 0 view .LVU88
+ 289 010c 1092 0000 		sts parity,__zero_reg__
+ 190:keysta.c      **** 					}
+ 290               		.loc 1 190 7 is_stmt 1 view .LVU89
+ 190:keysta.c      **** 					}
+ 291               		.loc 1 190 15 is_stmt 0 view .LVU90
+ 292 0110 1092 0000 		sts rx_byte,__zero_reg__
+ 293 0114 00C0      		rjmp .L22
+ 294               	.L17:
+ 207:keysta.c      **** 						parity++;
+ 295               		.loc 1 207 6 is_stmt 1 view .LVU91
+ 207:keysta.c      **** 						parity++;
+ 296               		.loc 1 207 9 is_stmt 0 view .LVU92
+ 297 0116 839B      		sbis 0x10,3
+ 298 0118 00C0      		rjmp .L28
+ 208:keysta.c      **** 					}
+ 299               		.loc 1 208 7 is_stmt 1 view .LVU93
+ 208:keysta.c      **** 					}
+ 300               		.loc 1 208 13 is_stmt 0 view .LVU94
+ 301 011a 8091 0000 		lds r24,parity
+ 302 011e 8F5F      		subi r24,lo8(-(1))
+ 303 0120 8093 0000 		sts parity,r24
+ 304               	.L28:
+ 210:keysta.c      **** 						/* faulty, not odd parity */
+ 305               		.loc 1 210 6 is_stmt 1 view .LVU95
+ 210:keysta.c      **** 						/* faulty, not odd parity */
+ 306               		.loc 1 210 19 is_stmt 0 view .LVU96
+ 307 0124 8091 0000 		lds r24,parity
+ 210:keysta.c      **** 						/* faulty, not odd parity */
+ 308               		.loc 1 210 9 view .LVU97
+ 309 0128 80FD      		sbrc r24,0
+ 310 012a 00C0      		rjmp .L22
+ 212:keysta.c      **** 					}
+ 311               		.loc 1 212 7 is_stmt 1 view .LVU98
+ 212:keysta.c      **** 					}
+ 312               		.loc 1 212 17 is_stmt 0 view .LVU99
+ 313 012c 8091 0000 		lds r24,kbd_flags
+ 314 0130 8260      		ori r24,lo8(2)
+ 315               	.L47:
+ 222:keysta.c      **** 					}
+ 316               		.loc 1 222 17 view .LVU100
+ 317 0132 8093 0000 		sts kbd_flags,r24
+ 318 0136 00C0      		rjmp .L22
+ 319               	.L25:
+ 216:keysta.c      **** 						/* if stop bit not seen */
+ 320               		.loc 1 216 6 is_stmt 1 view .LVU101
+ 216:keysta.c      **** 						/* if stop bit not seen */
+GAS LISTING /var/tmp//ccuNnCCL.s 			page 13
+
+
+ 321               		.loc 1 216 9 is_stmt 0 view .LVU102
+ 322 0138 8399      		sbic 0x10,3
+ 323 013a 00C0      		rjmp .L29
+ 218:keysta.c      **** 					}
+ 324               		.loc 1 218 7 is_stmt 1 view .LVU103
+ 218:keysta.c      **** 					}
+ 325               		.loc 1 218 17 is_stmt 0 view .LVU104
+ 326 013c 8091 0000 		lds r24,kbd_flags
+ 327 0140 8260      		ori r24,lo8(2)
+ 328 0142 8093 0000 		sts kbd_flags,r24
+ 329               	.L29:
+ 220:keysta.c      **** 						dataLow();
+ 330               		.loc 1 220 6 is_stmt 1 view .LVU105
+ 220:keysta.c      **** 						dataLow();
+ 331               		.loc 1 220 22 is_stmt 0 view .LVU106
+ 332 0146 8091 0000 		lds r24,kbd_flags
+ 220:keysta.c      **** 						dataLow();
+ 333               		.loc 1 220 9 view .LVU107
+ 334 014a 81FD      		sbrc r24,1
+ 335 014c 00C0      		rjmp .L22
+ 221:keysta.c      **** 						kbd_flags |= FLA_RX_BYTE;
+ 336               		.loc 1 221 7 is_stmt 1 view .LVU108
+ 337 014e 0E94 0000 		call dataLow
+ 338               	.LVL6:
+ 222:keysta.c      **** 					}
+ 339               		.loc 1 222 7 view .LVU109
+ 222:keysta.c      **** 					}
+ 340               		.loc 1 222 17 is_stmt 0 view .LVU110
+ 341 0152 8091 0000 		lds r24,kbd_flags
+ 342 0156 8460      		ori r24,lo8(4)
+ 343 0158 00C0      		rjmp .L47
+ 344               	.L14:
+ 236:keysta.c      **** 				if (kbd_flags & FLA_CLOCK_HIGH) {
+ 345               		.loc 1 236 4 is_stmt 1 view .LVU111
+ 236:keysta.c      **** 				if (kbd_flags & FLA_CLOCK_HIGH) {
+ 346               		.loc 1 236 18 is_stmt 0 view .LVU112
+ 347 015a 8091 0000 		lds r24,kbd_state
+ 236:keysta.c      **** 				if (kbd_flags & FLA_CLOCK_HIGH) {
+ 348               		.loc 1 236 7 view .LVU113
+ 349 015e 8F32      		cpi r24,lo8(47)
+ 350 0160 00F0      		brlo .+2
+ 351 0162 00C0      		rjmp .L5
+ 237:keysta.c      **** 					if (!readClockPin()) {
+ 352               		.loc 1 237 5 is_stmt 1 view .LVU114
+ 237:keysta.c      **** 					if (!readClockPin()) {
+ 353               		.loc 1 237 19 is_stmt 0 view .LVU115
+ 354 0164 8091 0000 		lds r24,kbd_flags
+ 237:keysta.c      **** 					if (!readClockPin()) {
+ 355               		.loc 1 237 8 view .LVU116
+ 356 0168 80FF      		sbrs r24,0
+ 357 016a 00C0      		rjmp .L31
+ 238:keysta.c      **** 						/* PC is still holding clock down */
+ 358               		.loc 1 238 6 is_stmt 1 view .LVU117
+ 238:keysta.c      **** 						/* PC is still holding clock down */
+ 359               		.loc 1 238 9 is_stmt 0 view .LVU118
+ 360 016c 829B      		sbis 0x10,2
+ 361 016e 00C0      		rjmp .L53
+GAS LISTING /var/tmp//ccuNnCCL.s 			page 14
+
+
+ 244:keysta.c      **** 					clockLow();
+ 362               		.loc 1 244 6 is_stmt 1 view .LVU119
+ 244:keysta.c      **** 					clockLow();
+ 363               		.loc 1 244 16 is_stmt 0 view .LVU120
+ 364 0170 8091 0000 		lds r24,kbd_flags
+ 365 0174 8E7F      		andi r24,lo8(-2)
+ 366 0176 8093 0000 		sts kbd_flags,r24
+ 245:keysta.c      **** 					return;
+ 367               		.loc 1 245 6 is_stmt 1 view .LVU121
+ 368 017a 0C94 0000 		jmp clockLow
+ 369               	.LVL7:
+ 370               	.L31:
+ 250:keysta.c      **** 				clockHigh();
+ 371               		.loc 1 250 5 view .LVU122
+ 250:keysta.c      **** 				clockHigh();
+ 372               		.loc 1 250 15 is_stmt 0 view .LVU123
+ 373 017e 8091 0000 		lds r24,kbd_flags
+ 374 0182 8160      		ori r24,lo8(1)
+ 375 0184 8093 0000 		sts kbd_flags,r24
+ 251:keysta.c      **** 				switch(kbd_state) {
+ 376               		.loc 1 251 5 is_stmt 1 view .LVU124
+ 377 0188 0E94 0000 		call clockHigh
+ 378               	.LVL8:
+ 252:keysta.c      **** 					case TX_START:
+ 379               		.loc 1 252 5 view .LVU125
+ 380 018c 8091 0000 		lds r24,kbd_state
+ 381 0190 8C32      		cpi r24,lo8(44)
+ 382 0192 01F0      		breq .L33
+ 383 0194 00F4      		brsh .L34
+ 384 0196 8432      		cpi r24,lo8(36)
+ 385 0198 01F0      		breq .L35
+ 386 019a 8552      		subi r24,lo8(-(-37))
+ 387 019c 8730      		cpi r24,lo8(7)
+ 388 019e 00F4      		brsh .L36
+ 389               	.L37:
+ 263:keysta.c      **** 							dataHigh();
+ 390               		.loc 1 263 7 view .LVU126
+ 263:keysta.c      **** 							dataHigh();
+ 391               		.loc 1 263 20 is_stmt 0 view .LVU127
+ 392 01a0 8091 0000 		lds r24,tx_shift
+ 263:keysta.c      **** 							dataHigh();
+ 393               		.loc 1 263 10 view .LVU128
+ 394 01a4 80FF      		sbrs r24,0
+ 395 01a6 00C0      		rjmp .L40
+ 264:keysta.c      **** 							parity++;
+ 396               		.loc 1 264 8 is_stmt 1 view .LVU129
+ 397 01a8 0E94 0000 		call dataHigh
+ 398               	.LVL9:
+ 265:keysta.c      **** 						} else {
+ 399               		.loc 1 265 8 view .LVU130
+ 265:keysta.c      **** 						} else {
+ 400               		.loc 1 265 14 is_stmt 0 view .LVU131
+ 401 01ac 8091 0000 		lds r24,parity
+ 402 01b0 8F5F      		subi r24,lo8(-(1))
+ 403 01b2 8093 0000 		sts parity,r24
+ 404               	.L41:
+ 269:keysta.c      **** 						break; /* clock hi 1 to 8 */
+GAS LISTING /var/tmp//ccuNnCCL.s 			page 15
+
+
+ 405               		.loc 1 269 7 is_stmt 1 view .LVU132
+ 269:keysta.c      **** 						break; /* clock hi 1 to 8 */
+ 406               		.loc 1 269 16 is_stmt 0 view .LVU133
+ 407 01b6 8091 0000 		lds r24,tx_shift
+ 408 01ba 8695      		lsr r24
+ 409 01bc 8093 0000 		sts tx_shift,r24
+ 270:keysta.c      **** 
+ 410               		.loc 1 270 7 is_stmt 1 view .LVU134
+ 411 01c0 00C0      		rjmp .L36
+ 412               	.L34:
+ 252:keysta.c      **** 					case TX_START:
+ 413               		.loc 1 252 5 is_stmt 0 view .LVU135
+ 414 01c2 8D32      		cpi r24,lo8(45)
+ 415 01c4 01F0      		breq .L38
+ 416 01c6 8E32      		cpi r24,lo8(46)
+ 417 01c8 01F4      		brne .+2
+ 418 01ca 00C0      		rjmp .L39
+ 419               	.L36:
+ 289:keysta.c      **** 
+ 420               		.loc 1 289 5 is_stmt 1 view .LVU136
+ 289:keysta.c      **** 
+ 421               		.loc 1 289 14 is_stmt 0 view .LVU137
+ 422 01cc 8091 0000 		lds r24,kbd_state
+ 423 01d0 8F5F      		subi r24,lo8(-(1))
+ 424 01d2 00C0      		rjmp .L50
+ 425               	.L35:
+ 254:keysta.c      **** 						parity = 0;
+ 426               		.loc 1 254 7 is_stmt 1 view .LVU138
+ 254:keysta.c      **** 						parity = 0;
+ 427               		.loc 1 254 16 is_stmt 0 view .LVU139
+ 428 01d4 8091 0000 		lds r24,tx_byte
+ 429 01d8 8093 0000 		sts tx_shift,r24
+ 255:keysta.c      **** 					case TX_DATA1: 
+ 430               		.loc 1 255 7 is_stmt 1 view .LVU140
+ 255:keysta.c      **** 					case TX_DATA1: 
+ 431               		.loc 1 255 14 is_stmt 0 view .LVU141
+ 432 01dc 1092 0000 		sts parity,__zero_reg__
+ 433 01e0 00C0      		rjmp .L37
+ 434               	.L40:
+ 267:keysta.c      **** 						}
+ 435               		.loc 1 267 8 is_stmt 1 view .LVU142
+ 436 01e2 0E94 0000 		call dataLow
+ 437               	.LVL10:
+ 438 01e6 00C0      		rjmp .L41
+ 439               	.L33:
+ 273:keysta.c      **** 							dataLow();
+ 440               		.loc 1 273 7 view .LVU143
+ 273:keysta.c      **** 							dataLow();
+ 441               		.loc 1 273 18 is_stmt 0 view .LVU144
+ 442 01e8 8091 0000 		lds r24,parity
+ 273:keysta.c      **** 							dataLow();
+ 443               		.loc 1 273 10 view .LVU145
+ 444 01ec 80FF      		sbrs r24,0
+ 445 01ee 00C0      		rjmp .L42
+ 274:keysta.c      **** 						} else {
+ 446               		.loc 1 274 8 is_stmt 1 view .LVU146
+ 447 01f0 0E94 0000 		call dataLow
+GAS LISTING /var/tmp//ccuNnCCL.s 			page 16
+
+
+ 448               	.LVL11:
+ 449               	.L43:
+ 278:keysta.c      **** 						kbd_flags |= FLA_TX_OK;
+ 450               		.loc 1 278 7 view .LVU147
+ 278:keysta.c      **** 						kbd_flags |= FLA_TX_OK;
+ 451               		.loc 1 278 17 is_stmt 0 view .LVU148
+ 452 01f4 8091 0000 		lds r24,kbd_flags
+ 453 01f8 877F      		andi r24,lo8(-9)
+ 454 01fa 8093 0000 		sts kbd_flags,r24
+ 279:keysta.c      **** 						break; /* clock hi 9 */
+ 455               		.loc 1 279 7 is_stmt 1 view .LVU149
+ 279:keysta.c      **** 						break; /* clock hi 9 */
+ 456               		.loc 1 279 17 is_stmt 0 view .LVU150
+ 457 01fe 8091 0000 		lds r24,kbd_flags
+ 458 0202 8061      		ori r24,lo8(16)
+ 459 0204 00C0      		rjmp .L51
+ 460               	.L42:
+ 276:keysta.c      **** 						}
+ 461               		.loc 1 276 8 is_stmt 1 view .LVU151
+ 462 0206 0E94 0000 		call dataHigh
+ 463               	.LVL12:
+ 464 020a 00C0      		rjmp .L43
+ 465               	.L38:
+ 282:keysta.c      **** 						break; /* clock hi 10 */
+ 466               		.loc 1 282 7 view .LVU152
+ 467 020c 0E94 0000 		call dataHigh
+ 468               	.LVL13:
+ 283:keysta.c      **** 					case TX_AFTER_STOP:
+ 469               		.loc 1 283 7 view .LVU153
+ 470 0210 00C0      		rjmp .L36
+ 471               		.cfi_endproc
+ 472               	.LFE7:
+ 473               		.size	timerAction, .-timerAction
+ 474               	.global	kbd_init
+ 475               		.type	kbd_init, @function
+ 476               	kbd_init:
+ 477               	.LFB4:
+  89:keysta.c      **** 	kbd_state = IDLE_START;
+ 478               		.loc 1 89 1 view -0
+ 479               		.cfi_startproc
+ 480               	/* prologue: function */
+ 481               	/* frame size = 0 */
+ 482               	/* stack size = 0 */
+ 483               	.L__stack_usage = 0
+  90:keysta.c      **** 	kbd_flags = FLA_CLOCK_HIGH | FLA_TX_OK;
+ 484               		.loc 1 90 2 view .LVU155
+  90:keysta.c      **** 	kbd_flags = FLA_CLOCK_HIGH | FLA_TX_OK;
+ 485               		.loc 1 90 12 is_stmt 0 view .LVU156
+ 486 0212 1092 0000 		sts kbd_state,__zero_reg__
+  91:keysta.c      **** 
+ 487               		.loc 1 91 2 is_stmt 1 view .LVU157
+  91:keysta.c      **** 
+ 488               		.loc 1 91 12 is_stmt 0 view .LVU158
+ 489 0216 81E1      		ldi r24,lo8(17)
+ 490 0218 8093 0000 		sts kbd_flags,r24
+  93:keysta.c      **** 	dataHigh();
+ 491               		.loc 1 93 2 is_stmt 1 view .LVU159
+GAS LISTING /var/tmp//ccuNnCCL.s 			page 17
+
+
+ 492 021c 0E94 0000 		call clockHigh
+ 493               	.LVL14:
+  94:keysta.c      **** 
+ 494               		.loc 1 94 2 view .LVU160
+ 495 0220 0E94 0000 		call dataHigh
+ 496               	.LVL15:
+  96:keysta.c      **** 	timer2SetPrescaler(TIMER_CLK_DIV8);
+ 497               		.loc 1 96 2 view .LVU161
+ 498 0224 0E94 0000 		call timer2Init
+ 499               	.LVL16:
+  97:keysta.c      **** 	timerAttach(TIMER2OVERFLOW_INT, timerAction);
+ 500               		.loc 1 97 2 view .LVU162
+ 501 0228 82E0      		ldi r24,lo8(2)
+ 502 022a 0E94 0000 		call timer2SetPrescaler
+ 503               	.LVL17:
+  98:keysta.c      **** 	outp(COUNT_UP, TCNT2);	/* value counts up from this to zero */
+ 504               		.loc 1 98 2 view .LVU163
+ 505 022e 60E0      		ldi r22,lo8(gs(timerAction))
+ 506 0230 70E0      		ldi r23,hi8(gs(timerAction))
+ 507 0232 85E0      		ldi r24,lo8(5)
+ 508 0234 0E94 0000 		call timerAttach
+ 509               	.LVL18:
+  99:keysta.c      **** }
+ 510               		.loc 1 99 2 view .LVU164
+ 511 0238 8FEC      		ldi r24,lo8(-49)
+ 512 023a 84BD      		out 0x24,r24
+ 513               	/* epilogue start */
+ 100:keysta.c      **** 
+ 514               		.loc 1 100 1 is_stmt 0 view .LVU165
+ 515 023c 0895      		ret
+ 516               		.cfi_endproc
+ 517               	.LFE4:
+ 518               		.size	kbd_init, .-kbd_init
+ 519               	.global	kbd_set_tx
+ 520               		.type	kbd_set_tx, @function
+ 521               	kbd_set_tx:
+ 522               	.LVL19:
+ 523               	.LFB5:
+ 104:keysta.c      **** 	tx_byte = txchar;
+ 524               		.loc 1 104 1 is_stmt 1 view -0
+ 525               		.cfi_startproc
+ 526               	/* prologue: function */
+ 527               	/* frame size = 0 */
+ 528               	/* stack size = 0 */
+ 529               	.L__stack_usage = 0
+ 105:keysta.c      **** 	cli();
+ 530               		.loc 1 105 2 view .LVU167
+ 105:keysta.c      **** 	cli();
+ 531               		.loc 1 105 10 is_stmt 0 view .LVU168
+ 532 023e 8093 0000 		sts tx_byte,r24
+ 106:keysta.c      **** 	kbd_flags &= ~FLA_TX_OK;
+ 533               		.loc 1 106 2 is_stmt 1 view .LVU169
+ 534               	/* #APP */
+ 535               	 ;  106 "keysta.c" 1
+ 536 0242 F894      		cli
+ 537               	 ;  0 "" 2
+ 107:keysta.c      **** 	kbd_flags |= FLA_TX_BYTE;
+GAS LISTING /var/tmp//ccuNnCCL.s 			page 18
+
+
+ 538               		.loc 1 107 2 view .LVU170
+ 107:keysta.c      **** 	kbd_flags |= FLA_TX_BYTE;
+ 539               		.loc 1 107 12 is_stmt 0 view .LVU171
+ 540               	/* #NOAPP */
+ 541 0244 8091 0000 		lds r24,kbd_flags
+ 542               	.LVL20:
+ 107:keysta.c      **** 	kbd_flags |= FLA_TX_BYTE;
+ 543               		.loc 1 107 12 view .LVU172
+ 544 0248 8F7E      		andi r24,lo8(-17)
+ 545 024a 8093 0000 		sts kbd_flags,r24
+ 546               	.LVL21:
+ 108:keysta.c      **** 	sei();
+ 547               		.loc 1 108 2 is_stmt 1 view .LVU173
+ 108:keysta.c      **** 	sei();
+ 548               		.loc 1 108 12 is_stmt 0 view .LVU174
+ 549 024e 8091 0000 		lds r24,kbd_flags
+ 550 0252 8860      		ori r24,lo8(8)
+ 551 0254 8093 0000 		sts kbd_flags,r24
+ 109:keysta.c      **** }
+ 552               		.loc 1 109 2 is_stmt 1 view .LVU175
+ 553               	/* #APP */
+ 554               	 ;  109 "keysta.c" 1
+ 555 0258 7894      		sei
+ 556               	 ;  0 "" 2
+ 557               	/* #NOAPP */
+ 558               	/* epilogue start */
+ 110:keysta.c      **** 
+ 559               		.loc 1 110 1 is_stmt 0 view .LVU176
+ 560 025a 0895      		ret
+ 561               		.cfi_endproc
+ 562               	.LFE5:
+ 563               		.size	kbd_set_tx, .-kbd_set_tx
+ 564               	.global	kbd_get_rx_char
+ 565               		.type	kbd_get_rx_char, @function
+ 566               	kbd_get_rx_char:
+ 567               	.LFB6:
+ 114:keysta.c      **** 	cli();
+ 568               		.loc 1 114 1 is_stmt 1 view -0
+ 569               		.cfi_startproc
+ 570               	/* prologue: function */
+ 571               	/* frame size = 0 */
+ 572               	/* stack size = 0 */
+ 573               	.L__stack_usage = 0
+ 115:keysta.c      **** 	kbd_flags &= ~FLA_RX_BYTE;
+ 574               		.loc 1 115 2 view .LVU178
+ 575               	/* #APP */
+ 576               	 ;  115 "keysta.c" 1
+ 577 025c F894      		cli
+ 578               	 ;  0 "" 2
+ 116:keysta.c      **** 	sei();
+ 579               		.loc 1 116 2 view .LVU179
+ 116:keysta.c      **** 	sei();
+ 580               		.loc 1 116 12 is_stmt 0 view .LVU180
+ 581               	/* #NOAPP */
+ 582 025e 8091 0000 		lds r24,kbd_flags
+ 583 0262 8B7F      		andi r24,lo8(-5)
+ 584 0264 8093 0000 		sts kbd_flags,r24
+GAS LISTING /var/tmp//ccuNnCCL.s 			page 19
+
+
+ 117:keysta.c      **** 	return rx_byte;
+ 585               		.loc 1 117 2 is_stmt 1 view .LVU181
+ 586               	/* #APP */
+ 587               	 ;  117 "keysta.c" 1
+ 588 0268 7894      		sei
+ 589               	 ;  0 "" 2
+ 118:keysta.c      **** }
+ 590               		.loc 1 118 2 view .LVU182
+ 118:keysta.c      **** }
+ 591               		.loc 1 118 9 is_stmt 0 view .LVU183
+ 592               	/* #NOAPP */
+ 593 026a 8091 0000 		lds r24,rx_byte
+ 594               	/* epilogue start */
+ 119:keysta.c      **** 
+ 595               		.loc 1 119 1 view .LVU184
+ 596 026e 0895      		ret
+ 597               		.cfi_endproc
+ 598               	.LFE6:
+ 599               		.size	kbd_get_rx_char, .-kbd_get_rx_char
+ 600               		.local	parity
+ 601               		.comm	parity,1,1
+ 602               		.local	tx_shift
+ 603               		.comm	tx_shift,1,1
+ 604               		.local	tx_byte
+ 605               		.comm	tx_byte,1,1
+ 606               		.local	rx_byte
+ 607               		.comm	rx_byte,1,1
+ 608               		.comm	kbd_state,1,1
+ 609               		.comm	kbd_flags,1,1
+ 610               	.Letext0:
+ 611               		.file 2 "../avrlib/timer.h"
+ 612               		.file 3 "/usr/local/Cellar/avr-gcc@9/9.3.0_3/avr/include/stdint.h"
+ 613               		.section	.debug_info,"",@progbits
+ 614               	.Ldebug_info0:
+ 615 0000 5703 0000 		.long	0x357
+ 616 0004 0400      		.word	0x4
+ 617 0006 0000 0000 		.long	.Ldebug_abbrev0
+ 618 000a 04        		.byte	0x4
+ 619 000b 01        		.uleb128 0x1
+ 620 000c 0000 0000 		.long	.LASF55
+ 621 0010 0C        		.byte	0xc
+ 622 0011 0000 0000 		.long	.LASF56
+ 623 0015 0000 0000 		.long	.LASF57
+ 624 0019 0000 0000 		.long	.Ltext0
+ 625 001d 7002 0000 		.long	.Letext0-.Ltext0
+ 626 0021 0000 0000 		.long	.Ldebug_line0
+ 627 0025 02        		.uleb128 0x2
+ 628 0026 01        		.byte	0x1
+ 629 0027 06        		.byte	0x6
+ 630 0028 0000 0000 		.long	.LASF0
+ 631 002c 03        		.uleb128 0x3
+ 632 002d 0000 0000 		.long	.LASF58
+ 633 0031 03        		.byte	0x3
+ 634 0032 7E        		.byte	0x7e
+ 635 0033 16        		.byte	0x16
+ 636 0034 3800 0000 		.long	0x38
+ 637 0038 02        		.uleb128 0x2
+GAS LISTING /var/tmp//ccuNnCCL.s 			page 20
+
+
+ 638 0039 01        		.byte	0x1
+ 639 003a 08        		.byte	0x8
+ 640 003b 0000 0000 		.long	.LASF1
+ 641 003f 04        		.uleb128 0x4
+ 642 0040 3800 0000 		.long	0x38
+ 643 0044 05        		.uleb128 0x5
+ 644 0045 02        		.byte	0x2
+ 645 0046 05        		.byte	0x5
+ 646 0047 696E 7400 		.string	"int"
+ 647 004b 02        		.uleb128 0x2
+ 648 004c 02        		.byte	0x2
+ 649 004d 07        		.byte	0x7
+ 650 004e 0000 0000 		.long	.LASF2
+ 651 0052 02        		.uleb128 0x2
+ 652 0053 04        		.byte	0x4
+ 653 0054 05        		.byte	0x5
+ 654 0055 0000 0000 		.long	.LASF3
+ 655 0059 02        		.uleb128 0x2
+ 656 005a 04        		.byte	0x4
+ 657 005b 07        		.byte	0x7
+ 658 005c 0000 0000 		.long	.LASF4
+ 659 0060 02        		.uleb128 0x2
+ 660 0061 08        		.byte	0x8
+ 661 0062 05        		.byte	0x5
+ 662 0063 0000 0000 		.long	.LASF5
+ 663 0067 02        		.uleb128 0x2
+ 664 0068 08        		.byte	0x8
+ 665 0069 07        		.byte	0x7
+ 666 006a 0000 0000 		.long	.LASF6
+ 667 006e 02        		.uleb128 0x2
+ 668 006f 02        		.byte	0x2
+ 669 0070 07        		.byte	0x7
+ 670 0071 0000 0000 		.long	.LASF7
+ 671 0075 02        		.uleb128 0x2
+ 672 0076 02        		.byte	0x2
+ 673 0077 05        		.byte	0x5
+ 674 0078 0000 0000 		.long	.LASF8
+ 675 007c 02        		.uleb128 0x2
+ 676 007d 01        		.byte	0x1
+ 677 007e 06        		.byte	0x6
+ 678 007f 0000 0000 		.long	.LASF9
+ 679 0083 06        		.uleb128 0x6
+ 680 0084 0000 0000 		.long	.LASF40
+ 681 0088 01        		.byte	0x1
+ 682 0089 41        		.byte	0x41
+ 683 008a 18        		.byte	0x18
+ 684 008b 3F00 0000 		.long	0x3f
+ 685 008f 05        		.uleb128 0x5
+ 686 0090 03        		.byte	0x3
+ 687 0091 0000 0000 		.long	kbd_flags
+ 688 0095 07        		.uleb128 0x7
+ 689 0096 0000 0000 		.long	.LASF59
+ 690 009a 07        		.byte	0x7
+ 691 009b 02        		.byte	0x2
+ 692 009c 4B00 0000 		.long	0x4b
+ 693 00a0 01        		.byte	0x1
+ 694 00a1 43        		.byte	0x43
+GAS LISTING /var/tmp//ccuNnCCL.s 			page 21
+
+
+ 695 00a2 06        		.byte	0x6
+ 696 00a3 5C01 0000 		.long	0x15c
+ 697 00a7 08        		.uleb128 0x8
+ 698 00a8 0000 0000 		.long	.LASF10
+ 699 00ac 00        		.byte	0
+ 700 00ad 08        		.uleb128 0x8
+ 701 00ae 0000 0000 		.long	.LASF11
+ 702 00b2 01        		.byte	0x1
+ 703 00b3 08        		.uleb128 0x8
+ 704 00b4 0000 0000 		.long	.LASF12
+ 705 00b8 02        		.byte	0x2
+ 706 00b9 08        		.uleb128 0x8
+ 707 00ba 0000 0000 		.long	.LASF13
+ 708 00be 03        		.byte	0x3
+ 709 00bf 08        		.uleb128 0x8
+ 710 00c0 0000 0000 		.long	.LASF14
+ 711 00c4 0D        		.byte	0xd
+ 712 00c5 08        		.uleb128 0x8
+ 713 00c6 0000 0000 		.long	.LASF15
+ 714 00ca 0E        		.byte	0xe
+ 715 00cb 08        		.uleb128 0x8
+ 716 00cc 0000 0000 		.long	.LASF16
+ 717 00d0 0F        		.byte	0xf
+ 718 00d1 08        		.uleb128 0x8
+ 719 00d2 0000 0000 		.long	.LASF17
+ 720 00d6 10        		.byte	0x10
+ 721 00d7 08        		.uleb128 0x8
+ 722 00d8 0000 0000 		.long	.LASF18
+ 723 00dc 11        		.byte	0x11
+ 724 00dd 08        		.uleb128 0x8
+ 725 00de 0000 0000 		.long	.LASF19
+ 726 00e2 12        		.byte	0x12
+ 727 00e3 08        		.uleb128 0x8
+ 728 00e4 0000 0000 		.long	.LASF20
+ 729 00e8 13        		.byte	0x13
+ 730 00e9 08        		.uleb128 0x8
+ 731 00ea 0000 0000 		.long	.LASF21
+ 732 00ee 14        		.byte	0x14
+ 733 00ef 08        		.uleb128 0x8
+ 734 00f0 0000 0000 		.long	.LASF22
+ 735 00f4 15        		.byte	0x15
+ 736 00f5 08        		.uleb128 0x8
+ 737 00f6 0000 0000 		.long	.LASF23
+ 738 00fa 16        		.byte	0x16
+ 739 00fb 08        		.uleb128 0x8
+ 740 00fc 0000 0000 		.long	.LASF24
+ 741 0100 17        		.byte	0x17
+ 742 0101 08        		.uleb128 0x8
+ 743 0102 0000 0000 		.long	.LASF25
+ 744 0106 18        		.byte	0x18
+ 745 0107 08        		.uleb128 0x8
+ 746 0108 0000 0000 		.long	.LASF26
+ 747 010c 19        		.byte	0x19
+ 748 010d 08        		.uleb128 0x8
+ 749 010e 0000 0000 		.long	.LASF27
+ 750 0112 1A        		.byte	0x1a
+ 751 0113 08        		.uleb128 0x8
+GAS LISTING /var/tmp//ccuNnCCL.s 			page 22
+
+
+ 752 0114 0000 0000 		.long	.LASF28
+ 753 0118 24        		.byte	0x24
+ 754 0119 08        		.uleb128 0x8
+ 755 011a 0000 0000 		.long	.LASF29
+ 756 011e 25        		.byte	0x25
+ 757 011f 08        		.uleb128 0x8
+ 758 0120 0000 0000 		.long	.LASF30
+ 759 0124 26        		.byte	0x26
+ 760 0125 08        		.uleb128 0x8
+ 761 0126 0000 0000 		.long	.LASF31
+ 762 012a 27        		.byte	0x27
+ 763 012b 08        		.uleb128 0x8
+ 764 012c 0000 0000 		.long	.LASF32
+ 765 0130 28        		.byte	0x28
+ 766 0131 08        		.uleb128 0x8
+ 767 0132 0000 0000 		.long	.LASF33
+ 768 0136 29        		.byte	0x29
+ 769 0137 08        		.uleb128 0x8
+ 770 0138 0000 0000 		.long	.LASF34
+ 771 013c 2A        		.byte	0x2a
+ 772 013d 08        		.uleb128 0x8
+ 773 013e 0000 0000 		.long	.LASF35
+ 774 0142 2B        		.byte	0x2b
+ 775 0143 08        		.uleb128 0x8
+ 776 0144 0000 0000 		.long	.LASF36
+ 777 0148 2C        		.byte	0x2c
+ 778 0149 08        		.uleb128 0x8
+ 779 014a 0000 0000 		.long	.LASF37
+ 780 014e 2D        		.byte	0x2d
+ 781 014f 08        		.uleb128 0x8
+ 782 0150 0000 0000 		.long	.LASF38
+ 783 0154 2E        		.byte	0x2e
+ 784 0155 08        		.uleb128 0x8
+ 785 0156 0000 0000 		.long	.LASF39
+ 786 015a 2F        		.byte	0x2f
+ 787 015b 00        		.byte	0
+ 788 015c 06        		.uleb128 0x6
+ 789 015d 0000 0000 		.long	.LASF41
+ 790 0161 01        		.byte	0x1
+ 791 0162 50        		.byte	0x50
+ 792 0163 18        		.byte	0x18
+ 793 0164 3F00 0000 		.long	0x3f
+ 794 0168 05        		.uleb128 0x5
+ 795 0169 03        		.byte	0x3
+ 796 016a 0000 0000 		.long	kbd_state
+ 797 016e 09        		.uleb128 0x9
+ 798 016f 0000 0000 		.long	.LASF42
+ 799 0173 01        		.byte	0x1
+ 800 0174 52        		.byte	0x52
+ 801 0175 1F        		.byte	0x1f
+ 802 0176 3F00 0000 		.long	0x3f
+ 803 017a 05        		.uleb128 0x5
+ 804 017b 03        		.byte	0x3
+ 805 017c 0000 0000 		.long	rx_byte
+ 806 0180 09        		.uleb128 0x9
+ 807 0181 0000 0000 		.long	.LASF43
+ 808 0185 01        		.byte	0x1
+GAS LISTING /var/tmp//ccuNnCCL.s 			page 23
+
+
+ 809 0186 53        		.byte	0x53
+ 810 0187 1F        		.byte	0x1f
+ 811 0188 3F00 0000 		.long	0x3f
+ 812 018c 05        		.uleb128 0x5
+ 813 018d 03        		.byte	0x3
+ 814 018e 0000 0000 		.long	tx_byte
+ 815 0192 09        		.uleb128 0x9
+ 816 0193 0000 0000 		.long	.LASF44
+ 817 0197 01        		.byte	0x1
+ 818 0198 54        		.byte	0x54
+ 819 0199 1F        		.byte	0x1f
+ 820 019a 3F00 0000 		.long	0x3f
+ 821 019e 05        		.uleb128 0x5
+ 822 019f 03        		.byte	0x3
+ 823 01a0 0000 0000 		.long	tx_shift
+ 824 01a4 09        		.uleb128 0x9
+ 825 01a5 0000 0000 		.long	.LASF45
+ 826 01a9 01        		.byte	0x1
+ 827 01aa 55        		.byte	0x55
+ 828 01ab 1F        		.byte	0x1f
+ 829 01ac 3F00 0000 		.long	0x3f
+ 830 01b0 05        		.uleb128 0x5
+ 831 01b1 03        		.byte	0x3
+ 832 01b2 0000 0000 		.long	parity
+ 833 01b6 0A        		.uleb128 0xa
+ 834 01b7 0000 0000 		.long	.LASF60
+ 835 01bb 01        		.byte	0x1
+ 836 01bc 79        		.byte	0x79
+ 837 01bd 0D        		.byte	0xd
+ 838 01be 0000 0000 		.long	.LFB7
+ 839 01c2 FA01 0000 		.long	.LFE7-.LFB7
+ 840 01c6 01        		.uleb128 0x1
+ 841 01c7 9C        		.byte	0x9c
+ 842 01c8 4B02 0000 		.long	0x24b
+ 843 01cc 0B        		.uleb128 0xb
+ 844 01cd 0000 0000 		.long	.LVL0
+ 845 01d1 0003 0000 		.long	0x300
+ 846 01d5 0C        		.uleb128 0xc
+ 847 01d6 0000 0000 		.long	.LVL1
+ 848 01da 2403 0000 		.long	0x324
+ 849 01de 0B        		.uleb128 0xb
+ 850 01df 0000 0000 		.long	.LVL2
+ 851 01e3 EE02 0000 		.long	0x2ee
+ 852 01e7 0B        		.uleb128 0xb
+ 853 01e8 0000 0000 		.long	.LVL3
+ 854 01ec 0003 0000 		.long	0x300
+ 855 01f0 0B        		.uleb128 0xb
+ 856 01f1 0000 0000 		.long	.LVL4
+ 857 01f5 1203 0000 		.long	0x312
+ 858 01f9 0B        		.uleb128 0xb
+ 859 01fa 0000 0000 		.long	.LVL5
+ 860 01fe 0003 0000 		.long	0x300
+ 861 0202 0B        		.uleb128 0xb
+ 862 0203 0000 0000 		.long	.LVL6
+ 863 0207 EE02 0000 		.long	0x2ee
+ 864 020b 0C        		.uleb128 0xc
+ 865 020c 0000 0000 		.long	.LVL7
+GAS LISTING /var/tmp//ccuNnCCL.s 			page 24
+
+
+ 866 0210 1203 0000 		.long	0x312
+ 867 0214 0B        		.uleb128 0xb
+ 868 0215 0000 0000 		.long	.LVL8
+ 869 0219 2403 0000 		.long	0x324
+ 870 021d 0B        		.uleb128 0xb
+ 871 021e 0000 0000 		.long	.LVL9
+ 872 0222 0003 0000 		.long	0x300
+ 873 0226 0B        		.uleb128 0xb
+ 874 0227 0000 0000 		.long	.LVL10
+ 875 022b EE02 0000 		.long	0x2ee
+ 876 022f 0B        		.uleb128 0xb
+ 877 0230 0000 0000 		.long	.LVL11
+ 878 0234 EE02 0000 		.long	0x2ee
+ 879 0238 0B        		.uleb128 0xb
+ 880 0239 0000 0000 		.long	.LVL12
+ 881 023d 0003 0000 		.long	0x300
+ 882 0241 0B        		.uleb128 0xb
+ 883 0242 0000 0000 		.long	.LVL13
+ 884 0246 0003 0000 		.long	0x300
+ 885 024a 00        		.byte	0
+ 886 024b 0D        		.uleb128 0xd
+ 887 024c 0000 0000 		.long	.LASF61
+ 888 0250 01        		.byte	0x1
+ 889 0251 71        		.byte	0x71
+ 890 0252 01        		.byte	0x1
+ 891 0253 3800 0000 		.long	0x38
+ 892 0257 0000 0000 		.long	.LFB6
+ 893 025b 1400 0000 		.long	.LFE6-.LFB6
+ 894 025f 01        		.uleb128 0x1
+ 895 0260 9C        		.byte	0x9c
+ 896 0261 0E        		.uleb128 0xe
+ 897 0262 0000 0000 		.long	.LASF46
+ 898 0266 01        		.byte	0x1
+ 899 0267 67        		.byte	0x67
+ 900 0268 01        		.byte	0x1
+ 901 0269 0000 0000 		.long	.LFB5
+ 902 026d 1E00 0000 		.long	.LFE5-.LFB5
+ 903 0271 01        		.uleb128 0x1
+ 904 0272 9C        		.byte	0x9c
+ 905 0273 8C02 0000 		.long	0x28c
+ 906 0277 0F        		.uleb128 0xf
+ 907 0278 0000 0000 		.long	.LASF62
+ 908 027c 01        		.byte	0x1
+ 909 027d 67        		.byte	0x67
+ 910 027e 1A        		.byte	0x1a
+ 911 027f 3800 0000 		.long	0x38
+ 912 0283 0000 0000 		.long	.LLST0
+ 913 0287 0000 0000 		.long	.LVUS0
+ 914 028b 00        		.byte	0
+ 915 028c 0E        		.uleb128 0xe
+ 916 028d 0000 0000 		.long	.LASF47
+ 917 0291 01        		.byte	0x1
+ 918 0292 58        		.byte	0x58
+ 919 0293 01        		.byte	0x1
+ 920 0294 0000 0000 		.long	.LFB4
+ 921 0298 2C00 0000 		.long	.LFE4-.LFB4
+ 922 029c 01        		.uleb128 0x1
+GAS LISTING /var/tmp//ccuNnCCL.s 			page 25
+
+
+ 923 029d 9C        		.byte	0x9c
+ 924 029e EE02 0000 		.long	0x2ee
+ 925 02a2 0B        		.uleb128 0xb
+ 926 02a3 0000 0000 		.long	.LVL14
+ 927 02a7 2403 0000 		.long	0x324
+ 928 02ab 0B        		.uleb128 0xb
+ 929 02ac 0000 0000 		.long	.LVL15
+ 930 02b0 0003 0000 		.long	0x300
+ 931 02b4 0B        		.uleb128 0xb
+ 932 02b5 0000 0000 		.long	.LVL16
+ 933 02b9 3603 0000 		.long	0x336
+ 934 02bd 10        		.uleb128 0x10
+ 935 02be 0000 0000 		.long	.LVL17
+ 936 02c2 4203 0000 		.long	0x342
+ 937 02c6 D002 0000 		.long	0x2d0
+ 938 02ca 11        		.uleb128 0x11
+ 939 02cb 01        		.uleb128 0x1
+ 940 02cc 68        		.byte	0x68
+ 941 02cd 01        		.uleb128 0x1
+ 942 02ce 32        		.byte	0x32
+ 943 02cf 00        		.byte	0
+ 944 02d0 12        		.uleb128 0x12
+ 945 02d1 0000 0000 		.long	.LVL18
+ 946 02d5 4E03 0000 		.long	0x34e
+ 947 02d9 11        		.uleb128 0x11
+ 948 02da 01        		.uleb128 0x1
+ 949 02db 68        		.byte	0x68
+ 950 02dc 01        		.uleb128 0x1
+ 951 02dd 35        		.byte	0x35
+ 952 02de 11        		.uleb128 0x11
+ 953 02df 06        		.uleb128 0x6
+ 954 02e0 66        		.byte	0x66
+ 955 02e1 93        		.byte	0x93
+ 956 02e2 01        		.uleb128 0x1
+ 957 02e3 67        		.byte	0x67
+ 958 02e4 93        		.byte	0x93
+ 959 02e5 01        		.uleb128 0x1
+ 960 02e6 05        		.uleb128 0x5
+ 961 02e7 03        		.byte	0x3
+ 962 02e8 0000 0000 		.long	timerAction
+ 963 02ec 00        		.byte	0
+ 964 02ed 00        		.byte	0
+ 965 02ee 13        		.uleb128 0x13
+ 966 02ef 0000 0000 		.long	.LASF48
+ 967 02f3 01        		.byte	0x1
+ 968 02f4 38        		.byte	0x38
+ 969 02f5 0D        		.byte	0xd
+ 970 02f6 0000 0000 		.long	.LFB3
+ 971 02fa 0600 0000 		.long	.LFE3-.LFB3
+ 972 02fe 01        		.uleb128 0x1
+ 973 02ff 9C        		.byte	0x9c
+ 974 0300 13        		.uleb128 0x13
+ 975 0301 0000 0000 		.long	.LASF49
+ 976 0305 01        		.byte	0x1
+ 977 0306 32        		.byte	0x32
+ 978 0307 0D        		.byte	0xd
+ 979 0308 0000 0000 		.long	.LFB2
+GAS LISTING /var/tmp//ccuNnCCL.s 			page 26
+
+
+ 980 030c 0600 0000 		.long	.LFE2-.LFB2
+ 981 0310 01        		.uleb128 0x1
+ 982 0311 9C        		.byte	0x9c
+ 983 0312 13        		.uleb128 0x13
+ 984 0313 0000 0000 		.long	.LASF50
+ 985 0317 01        		.byte	0x1
+ 986 0318 2C        		.byte	0x2c
+ 987 0319 0D        		.byte	0xd
+ 988 031a 0000 0000 		.long	.LFB1
+ 989 031e 0600 0000 		.long	.LFE1-.LFB1
+ 990 0322 01        		.uleb128 0x1
+ 991 0323 9C        		.byte	0x9c
+ 992 0324 13        		.uleb128 0x13
+ 993 0325 0000 0000 		.long	.LASF51
+ 994 0329 01        		.byte	0x1
+ 995 032a 26        		.byte	0x26
+ 996 032b 0D        		.byte	0xd
+ 997 032c 0000 0000 		.long	.LFB0
+ 998 0330 0600 0000 		.long	.LFE0-.LFB0
+ 999 0334 01        		.uleb128 0x1
+ 1000 0335 9C        		.byte	0x9c
+ 1001 0336 14        		.uleb128 0x14
+ 1002 0337 0000 0000 		.long	.LASF52
+ 1003 033b 0000 0000 		.long	.LASF52
+ 1004 033f 02        		.byte	0x2
+ 1005 0340 C7        		.byte	0xc7
+ 1006 0341 06        		.byte	0x6
+ 1007 0342 14        		.uleb128 0x14
+ 1008 0343 0000 0000 		.long	.LASF53
+ 1009 0347 0000 0000 		.long	.LASF53
+ 1010 034b 02        		.byte	0x2
+ 1011 034c D5        		.byte	0xd5
+ 1012 034d 06        		.byte	0x6
+ 1013 034e 14        		.uleb128 0x14
+ 1014 034f 0000 0000 		.long	.LASF54
+ 1015 0353 0000 0000 		.long	.LASF54
+ 1016 0357 02        		.byte	0x2
+ 1017 0358 F0        		.byte	0xf0
+ 1018 0359 06        		.byte	0x6
+ 1019 035a 00        		.byte	0
+ 1020               		.section	.debug_abbrev,"",@progbits
+ 1021               	.Ldebug_abbrev0:
+ 1022 0000 01        		.uleb128 0x1
+ 1023 0001 11        		.uleb128 0x11
+ 1024 0002 01        		.byte	0x1
+ 1025 0003 25        		.uleb128 0x25
+ 1026 0004 0E        		.uleb128 0xe
+ 1027 0005 13        		.uleb128 0x13
+ 1028 0006 0B        		.uleb128 0xb
+ 1029 0007 03        		.uleb128 0x3
+ 1030 0008 0E        		.uleb128 0xe
+ 1031 0009 1B        		.uleb128 0x1b
+ 1032 000a 0E        		.uleb128 0xe
+ 1033 000b 11        		.uleb128 0x11
+ 1034 000c 01        		.uleb128 0x1
+ 1035 000d 12        		.uleb128 0x12
+ 1036 000e 06        		.uleb128 0x6
+GAS LISTING /var/tmp//ccuNnCCL.s 			page 27
+
+
+ 1037 000f 10        		.uleb128 0x10
+ 1038 0010 17        		.uleb128 0x17
+ 1039 0011 00        		.byte	0
+ 1040 0012 00        		.byte	0
+ 1041 0013 02        		.uleb128 0x2
+ 1042 0014 24        		.uleb128 0x24
+ 1043 0015 00        		.byte	0
+ 1044 0016 0B        		.uleb128 0xb
+ 1045 0017 0B        		.uleb128 0xb
+ 1046 0018 3E        		.uleb128 0x3e
+ 1047 0019 0B        		.uleb128 0xb
+ 1048 001a 03        		.uleb128 0x3
+ 1049 001b 0E        		.uleb128 0xe
+ 1050 001c 00        		.byte	0
+ 1051 001d 00        		.byte	0
+ 1052 001e 03        		.uleb128 0x3
+ 1053 001f 16        		.uleb128 0x16
+ 1054 0020 00        		.byte	0
+ 1055 0021 03        		.uleb128 0x3
+ 1056 0022 0E        		.uleb128 0xe
+ 1057 0023 3A        		.uleb128 0x3a
+ 1058 0024 0B        		.uleb128 0xb
+ 1059 0025 3B        		.uleb128 0x3b
+ 1060 0026 0B        		.uleb128 0xb
+ 1061 0027 39        		.uleb128 0x39
+ 1062 0028 0B        		.uleb128 0xb
+ 1063 0029 49        		.uleb128 0x49
+ 1064 002a 13        		.uleb128 0x13
+ 1065 002b 00        		.byte	0
+ 1066 002c 00        		.byte	0
+ 1067 002d 04        		.uleb128 0x4
+ 1068 002e 35        		.uleb128 0x35
+ 1069 002f 00        		.byte	0
+ 1070 0030 49        		.uleb128 0x49
+ 1071 0031 13        		.uleb128 0x13
+ 1072 0032 00        		.byte	0
+ 1073 0033 00        		.byte	0
+ 1074 0034 05        		.uleb128 0x5
+ 1075 0035 24        		.uleb128 0x24
+ 1076 0036 00        		.byte	0
+ 1077 0037 0B        		.uleb128 0xb
+ 1078 0038 0B        		.uleb128 0xb
+ 1079 0039 3E        		.uleb128 0x3e
+ 1080 003a 0B        		.uleb128 0xb
+ 1081 003b 03        		.uleb128 0x3
+ 1082 003c 08        		.uleb128 0x8
+ 1083 003d 00        		.byte	0
+ 1084 003e 00        		.byte	0
+ 1085 003f 06        		.uleb128 0x6
+ 1086 0040 34        		.uleb128 0x34
+ 1087 0041 00        		.byte	0
+ 1088 0042 03        		.uleb128 0x3
+ 1089 0043 0E        		.uleb128 0xe
+ 1090 0044 3A        		.uleb128 0x3a
+ 1091 0045 0B        		.uleb128 0xb
+ 1092 0046 3B        		.uleb128 0x3b
+ 1093 0047 0B        		.uleb128 0xb
+GAS LISTING /var/tmp//ccuNnCCL.s 			page 28
+
+
+ 1094 0048 39        		.uleb128 0x39
+ 1095 0049 0B        		.uleb128 0xb
+ 1096 004a 49        		.uleb128 0x49
+ 1097 004b 13        		.uleb128 0x13
+ 1098 004c 3F        		.uleb128 0x3f
+ 1099 004d 19        		.uleb128 0x19
+ 1100 004e 02        		.uleb128 0x2
+ 1101 004f 18        		.uleb128 0x18
+ 1102 0050 00        		.byte	0
+ 1103 0051 00        		.byte	0
+ 1104 0052 07        		.uleb128 0x7
+ 1105 0053 04        		.uleb128 0x4
+ 1106 0054 01        		.byte	0x1
+ 1107 0055 03        		.uleb128 0x3
+ 1108 0056 0E        		.uleb128 0xe
+ 1109 0057 3E        		.uleb128 0x3e
+ 1110 0058 0B        		.uleb128 0xb
+ 1111 0059 0B        		.uleb128 0xb
+ 1112 005a 0B        		.uleb128 0xb
+ 1113 005b 49        		.uleb128 0x49
+ 1114 005c 13        		.uleb128 0x13
+ 1115 005d 3A        		.uleb128 0x3a
+ 1116 005e 0B        		.uleb128 0xb
+ 1117 005f 3B        		.uleb128 0x3b
+ 1118 0060 0B        		.uleb128 0xb
+ 1119 0061 39        		.uleb128 0x39
+ 1120 0062 0B        		.uleb128 0xb
+ 1121 0063 01        		.uleb128 0x1
+ 1122 0064 13        		.uleb128 0x13
+ 1123 0065 00        		.byte	0
+ 1124 0066 00        		.byte	0
+ 1125 0067 08        		.uleb128 0x8
+ 1126 0068 28        		.uleb128 0x28
+ 1127 0069 00        		.byte	0
+ 1128 006a 03        		.uleb128 0x3
+ 1129 006b 0E        		.uleb128 0xe
+ 1130 006c 1C        		.uleb128 0x1c
+ 1131 006d 0B        		.uleb128 0xb
+ 1132 006e 00        		.byte	0
+ 1133 006f 00        		.byte	0
+ 1134 0070 09        		.uleb128 0x9
+ 1135 0071 34        		.uleb128 0x34
+ 1136 0072 00        		.byte	0
+ 1137 0073 03        		.uleb128 0x3
+ 1138 0074 0E        		.uleb128 0xe
+ 1139 0075 3A        		.uleb128 0x3a
+ 1140 0076 0B        		.uleb128 0xb
+ 1141 0077 3B        		.uleb128 0x3b
+ 1142 0078 0B        		.uleb128 0xb
+ 1143 0079 39        		.uleb128 0x39
+ 1144 007a 0B        		.uleb128 0xb
+ 1145 007b 49        		.uleb128 0x49
+ 1146 007c 13        		.uleb128 0x13
+ 1147 007d 02        		.uleb128 0x2
+ 1148 007e 18        		.uleb128 0x18
+ 1149 007f 00        		.byte	0
+ 1150 0080 00        		.byte	0
+GAS LISTING /var/tmp//ccuNnCCL.s 			page 29
+
+
+ 1151 0081 0A        		.uleb128 0xa
+ 1152 0082 2E        		.uleb128 0x2e
+ 1153 0083 01        		.byte	0x1
+ 1154 0084 03        		.uleb128 0x3
+ 1155 0085 0E        		.uleb128 0xe
+ 1156 0086 3A        		.uleb128 0x3a
+ 1157 0087 0B        		.uleb128 0xb
+ 1158 0088 3B        		.uleb128 0x3b
+ 1159 0089 0B        		.uleb128 0xb
+ 1160 008a 39        		.uleb128 0x39
+ 1161 008b 0B        		.uleb128 0xb
+ 1162 008c 27        		.uleb128 0x27
+ 1163 008d 19        		.uleb128 0x19
+ 1164 008e 11        		.uleb128 0x11
+ 1165 008f 01        		.uleb128 0x1
+ 1166 0090 12        		.uleb128 0x12
+ 1167 0091 06        		.uleb128 0x6
+ 1168 0092 40        		.uleb128 0x40
+ 1169 0093 18        		.uleb128 0x18
+ 1170 0094 9742      		.uleb128 0x2117
+ 1171 0096 19        		.uleb128 0x19
+ 1172 0097 01        		.uleb128 0x1
+ 1173 0098 13        		.uleb128 0x13
+ 1174 0099 00        		.byte	0
+ 1175 009a 00        		.byte	0
+ 1176 009b 0B        		.uleb128 0xb
+ 1177 009c 8982 01   		.uleb128 0x4109
+ 1178 009f 00        		.byte	0
+ 1179 00a0 11        		.uleb128 0x11
+ 1180 00a1 01        		.uleb128 0x1
+ 1181 00a2 31        		.uleb128 0x31
+ 1182 00a3 13        		.uleb128 0x13
+ 1183 00a4 00        		.byte	0
+ 1184 00a5 00        		.byte	0
+ 1185 00a6 0C        		.uleb128 0xc
+ 1186 00a7 8982 01   		.uleb128 0x4109
+ 1187 00aa 00        		.byte	0
+ 1188 00ab 11        		.uleb128 0x11
+ 1189 00ac 01        		.uleb128 0x1
+ 1190 00ad 9542      		.uleb128 0x2115
+ 1191 00af 19        		.uleb128 0x19
+ 1192 00b0 31        		.uleb128 0x31
+ 1193 00b1 13        		.uleb128 0x13
+ 1194 00b2 00        		.byte	0
+ 1195 00b3 00        		.byte	0
+ 1196 00b4 0D        		.uleb128 0xd
+ 1197 00b5 2E        		.uleb128 0x2e
+ 1198 00b6 00        		.byte	0
+ 1199 00b7 3F        		.uleb128 0x3f
+ 1200 00b8 19        		.uleb128 0x19
+ 1201 00b9 03        		.uleb128 0x3
+ 1202 00ba 0E        		.uleb128 0xe
+ 1203 00bb 3A        		.uleb128 0x3a
+ 1204 00bc 0B        		.uleb128 0xb
+ 1205 00bd 3B        		.uleb128 0x3b
+ 1206 00be 0B        		.uleb128 0xb
+ 1207 00bf 39        		.uleb128 0x39
+GAS LISTING /var/tmp//ccuNnCCL.s 			page 30
+
+
+ 1208 00c0 0B        		.uleb128 0xb
+ 1209 00c1 27        		.uleb128 0x27
+ 1210 00c2 19        		.uleb128 0x19
+ 1211 00c3 49        		.uleb128 0x49
+ 1212 00c4 13        		.uleb128 0x13
+ 1213 00c5 11        		.uleb128 0x11
+ 1214 00c6 01        		.uleb128 0x1
+ 1215 00c7 12        		.uleb128 0x12
+ 1216 00c8 06        		.uleb128 0x6
+ 1217 00c9 40        		.uleb128 0x40
+ 1218 00ca 18        		.uleb128 0x18
+ 1219 00cb 9742      		.uleb128 0x2117
+ 1220 00cd 19        		.uleb128 0x19
+ 1221 00ce 00        		.byte	0
+ 1222 00cf 00        		.byte	0
+ 1223 00d0 0E        		.uleb128 0xe
+ 1224 00d1 2E        		.uleb128 0x2e
+ 1225 00d2 01        		.byte	0x1
+ 1226 00d3 3F        		.uleb128 0x3f
+ 1227 00d4 19        		.uleb128 0x19
+ 1228 00d5 03        		.uleb128 0x3
+ 1229 00d6 0E        		.uleb128 0xe
+ 1230 00d7 3A        		.uleb128 0x3a
+ 1231 00d8 0B        		.uleb128 0xb
+ 1232 00d9 3B        		.uleb128 0x3b
+ 1233 00da 0B        		.uleb128 0xb
+ 1234 00db 39        		.uleb128 0x39
+ 1235 00dc 0B        		.uleb128 0xb
+ 1236 00dd 27        		.uleb128 0x27
+ 1237 00de 19        		.uleb128 0x19
+ 1238 00df 11        		.uleb128 0x11
+ 1239 00e0 01        		.uleb128 0x1
+ 1240 00e1 12        		.uleb128 0x12
+ 1241 00e2 06        		.uleb128 0x6
+ 1242 00e3 40        		.uleb128 0x40
+ 1243 00e4 18        		.uleb128 0x18
+ 1244 00e5 9742      		.uleb128 0x2117
+ 1245 00e7 19        		.uleb128 0x19
+ 1246 00e8 01        		.uleb128 0x1
+ 1247 00e9 13        		.uleb128 0x13
+ 1248 00ea 00        		.byte	0
+ 1249 00eb 00        		.byte	0
+ 1250 00ec 0F        		.uleb128 0xf
+ 1251 00ed 05        		.uleb128 0x5
+ 1252 00ee 00        		.byte	0
+ 1253 00ef 03        		.uleb128 0x3
+ 1254 00f0 0E        		.uleb128 0xe
+ 1255 00f1 3A        		.uleb128 0x3a
+ 1256 00f2 0B        		.uleb128 0xb
+ 1257 00f3 3B        		.uleb128 0x3b
+ 1258 00f4 0B        		.uleb128 0xb
+ 1259 00f5 39        		.uleb128 0x39
+ 1260 00f6 0B        		.uleb128 0xb
+ 1261 00f7 49        		.uleb128 0x49
+ 1262 00f8 13        		.uleb128 0x13
+ 1263 00f9 02        		.uleb128 0x2
+ 1264 00fa 17        		.uleb128 0x17
+GAS LISTING /var/tmp//ccuNnCCL.s 			page 31
+
+
+ 1265 00fb B742      		.uleb128 0x2137
+ 1266 00fd 17        		.uleb128 0x17
+ 1267 00fe 00        		.byte	0
+ 1268 00ff 00        		.byte	0
+ 1269 0100 10        		.uleb128 0x10
+ 1270 0101 8982 01   		.uleb128 0x4109
+ 1271 0104 01        		.byte	0x1
+ 1272 0105 11        		.uleb128 0x11
+ 1273 0106 01        		.uleb128 0x1
+ 1274 0107 31        		.uleb128 0x31
+ 1275 0108 13        		.uleb128 0x13
+ 1276 0109 01        		.uleb128 0x1
+ 1277 010a 13        		.uleb128 0x13
+ 1278 010b 00        		.byte	0
+ 1279 010c 00        		.byte	0
+ 1280 010d 11        		.uleb128 0x11
+ 1281 010e 8A82 01   		.uleb128 0x410a
+ 1282 0111 00        		.byte	0
+ 1283 0112 02        		.uleb128 0x2
+ 1284 0113 18        		.uleb128 0x18
+ 1285 0114 9142      		.uleb128 0x2111
+ 1286 0116 18        		.uleb128 0x18
+ 1287 0117 00        		.byte	0
+ 1288 0118 00        		.byte	0
+ 1289 0119 12        		.uleb128 0x12
+ 1290 011a 8982 01   		.uleb128 0x4109
+ 1291 011d 01        		.byte	0x1
+ 1292 011e 11        		.uleb128 0x11
+ 1293 011f 01        		.uleb128 0x1
+ 1294 0120 31        		.uleb128 0x31
+ 1295 0121 13        		.uleb128 0x13
+ 1296 0122 00        		.byte	0
+ 1297 0123 00        		.byte	0
+ 1298 0124 13        		.uleb128 0x13
+ 1299 0125 2E        		.uleb128 0x2e
+ 1300 0126 00        		.byte	0
+ 1301 0127 03        		.uleb128 0x3
+ 1302 0128 0E        		.uleb128 0xe
+ 1303 0129 3A        		.uleb128 0x3a
+ 1304 012a 0B        		.uleb128 0xb
+ 1305 012b 3B        		.uleb128 0x3b
+ 1306 012c 0B        		.uleb128 0xb
+ 1307 012d 39        		.uleb128 0x39
+ 1308 012e 0B        		.uleb128 0xb
+ 1309 012f 27        		.uleb128 0x27
+ 1310 0130 19        		.uleb128 0x19
+ 1311 0131 11        		.uleb128 0x11
+ 1312 0132 01        		.uleb128 0x1
+ 1313 0133 12        		.uleb128 0x12
+ 1314 0134 06        		.uleb128 0x6
+ 1315 0135 40        		.uleb128 0x40
+ 1316 0136 18        		.uleb128 0x18
+ 1317 0137 9742      		.uleb128 0x2117
+ 1318 0139 19        		.uleb128 0x19
+ 1319 013a 00        		.byte	0
+ 1320 013b 00        		.byte	0
+ 1321 013c 14        		.uleb128 0x14
+GAS LISTING /var/tmp//ccuNnCCL.s 			page 32
+
+
+ 1322 013d 2E        		.uleb128 0x2e
+ 1323 013e 00        		.byte	0
+ 1324 013f 3F        		.uleb128 0x3f
+ 1325 0140 19        		.uleb128 0x19
+ 1326 0141 3C        		.uleb128 0x3c
+ 1327 0142 19        		.uleb128 0x19
+ 1328 0143 6E        		.uleb128 0x6e
+ 1329 0144 0E        		.uleb128 0xe
+ 1330 0145 03        		.uleb128 0x3
+ 1331 0146 0E        		.uleb128 0xe
+ 1332 0147 3A        		.uleb128 0x3a
+ 1333 0148 0B        		.uleb128 0xb
+ 1334 0149 3B        		.uleb128 0x3b
+ 1335 014a 0B        		.uleb128 0xb
+ 1336 014b 39        		.uleb128 0x39
+ 1337 014c 0B        		.uleb128 0xb
+ 1338 014d 00        		.byte	0
+ 1339 014e 00        		.byte	0
+ 1340 014f 00        		.byte	0
+ 1341               		.section	.debug_loc,"",@progbits
+ 1342               	.Ldebug_loc0:
+ 1343               	.LVUS0:
+ 1344 0000 00        		.uleb128 0
+ 1345 0001 00        		.uleb128 .LVU172
+ 1346 0002 00        		.uleb128 .LVU172
+ 1347 0003 00        		.uleb128 .LVU173
+ 1348 0004 00        		.uleb128 .LVU173
+ 1349 0005 00        		.uleb128 0
+ 1350               	.LLST0:
+ 1351 0006 3E02 0000 		.long	.LVL19-.Ltext0
+ 1352 000a 4802 0000 		.long	.LVL20-.Ltext0
+ 1353 000e 0100      		.word	0x1
+ 1354 0010 68        		.byte	0x68
+ 1355 0011 4802 0000 		.long	.LVL20-.Ltext0
+ 1356 0015 4E02 0000 		.long	.LVL21-.Ltext0
+ 1357 0019 0500      		.word	0x5
+ 1358 001b 03        		.byte	0x3
+ 1359 001c 0000 0000 		.long	tx_byte
+ 1360 0020 4E02 0000 		.long	.LVL21-.Ltext0
+ 1361 0024 5C02 0000 		.long	.LFE5-.Ltext0
+ 1362 0028 0400      		.word	0x4
+ 1363 002a F3        		.byte	0xf3
+ 1364 002b 01        		.uleb128 0x1
+ 1365 002c 68        		.byte	0x68
+ 1366 002d 9F        		.byte	0x9f
+ 1367 002e 0000 0000 		.long	0
+ 1368 0032 0000 0000 		.long	0
+ 1369               		.section	.debug_aranges,"",@progbits
+ 1370 0000 1C00 0000 		.long	0x1c
+ 1371 0004 0200      		.word	0x2
+ 1372 0006 0000 0000 		.long	.Ldebug_info0
+ 1373 000a 04        		.byte	0x4
+ 1374 000b 00        		.byte	0
+ 1375 000c 0000      		.word	0
+ 1376 000e 0000      		.word	0
+ 1377 0010 0000 0000 		.long	.Ltext0
+ 1378 0014 7002 0000 		.long	.Letext0-.Ltext0
+GAS LISTING /var/tmp//ccuNnCCL.s 			page 33
+
+
+ 1379 0018 0000 0000 		.long	0
+ 1380 001c 0000 0000 		.long	0
+ 1381               		.section	.debug_line,"",@progbits
+ 1382               	.Ldebug_line0:
+ 1383 0000 9F06 0000 		.section	.debug_str,"MS",@progbits,1
+ 1383      0300 7000 
+ 1383      0000 0201 
+ 1383      FB0E 0D00 
+ 1383      0101 0101 
+ 1384               	.LASF37:
+ 1385 0000 5458 5F53 		.string	"TX_STOP"
+ 1385      544F 5000 
+ 1386               	.LASF15:
+ 1387 0008 5258 5F52 		.string	"RX_RELCLK"
+ 1387      454C 434C 
+ 1387      4B00 
+ 1388               	.LASF14:
+ 1389 0012 5258 5F53 		.string	"RX_START"
+ 1389      5441 5254 
+ 1389      00
+ 1390               	.LASF13:
+ 1391 001b 4944 4C45 		.string	"IDLE_END"
+ 1391      5F45 4E44 
+ 1391      00
+ 1392               	.LASF62:
+ 1393 0024 7478 6368 		.string	"txchar"
+ 1393      6172 00
+ 1394               	.LASF11:
+ 1395 002b 4944 4C45 		.string	"IDLE_WAIT_REL"
+ 1395      5F57 4149 
+ 1395      545F 5245 
+ 1395      4C00 
+ 1396               	.LASF8:
+ 1397 0039 7368 6F72 		.string	"short int"
+ 1397      7420 696E 
+ 1397      7400 
+ 1398               	.LASF60:
+ 1399 0043 7469 6D65 		.string	"timerAction"
+ 1399      7241 6374 
+ 1399      696F 6E00 
+ 1400               	.LASF29:
+ 1401 004f 5458 5F44 		.string	"TX_DATA1"
+ 1401      4154 4131 
+ 1401      00
+ 1402               	.LASF30:
+ 1403 0058 5458 5F44 		.string	"TX_DATA2"
+ 1403      4154 4132 
+ 1403      00
+ 1404               	.LASF31:
+ 1405 0061 5458 5F44 		.string	"TX_DATA3"
+ 1405      4154 4133 
+ 1405      00
+ 1406               	.LASF32:
+ 1407 006a 5458 5F44 		.string	"TX_DATA4"
+ 1407      4154 4134 
+ 1407      00
+ 1408               	.LASF33:
+GAS LISTING /var/tmp//ccuNnCCL.s 			page 34
+
+
+ 1409 0073 5458 5F44 		.string	"TX_DATA5"
+ 1409      4154 4135 
+ 1409      00
+ 1410               	.LASF34:
+ 1411 007c 5458 5F44 		.string	"TX_DATA6"
+ 1411      4154 4136 
+ 1411      00
+ 1412               	.LASF35:
+ 1413 0085 5458 5F44 		.string	"TX_DATA7"
+ 1413      4154 4137 
+ 1413      00
+ 1414               	.LASF28:
+ 1415 008e 5458 5F53 		.string	"TX_START"
+ 1415      5441 5254 
+ 1415      00
+ 1416               	.LASF40:
+ 1417 0097 6B62 645F 		.string	"kbd_flags"
+ 1417      666C 6167 
+ 1417      7300 
+ 1418               	.LASF58:
+ 1419 00a1 7569 6E74 		.string	"uint8_t"
+ 1419      385F 7400 
+ 1420               	.LASF56:
+ 1421 00a9 6B65 7973 		.string	"keysta.c"
+ 1421      7461 2E63 
+ 1421      00
+ 1422               	.LASF41:
+ 1423 00b2 6B62 645F 		.string	"kbd_state"
+ 1423      7374 6174 
+ 1423      6500 
+ 1424               	.LASF46:
+ 1425 00bc 6B62 645F 		.string	"kbd_set_tx"
+ 1425      7365 745F 
+ 1425      7478 00
+ 1426               	.LASF50:
+ 1427 00c7 636C 6F63 		.string	"clockLow"
+ 1427      6B4C 6F77 
+ 1427      00
+ 1428               	.LASF52:
+ 1429 00d0 7469 6D65 		.string	"timer2Init"
+ 1429      7232 496E 
+ 1429      6974 00
+ 1430               	.LASF49:
+ 1431 00db 6461 7461 		.string	"dataHigh"
+ 1431      4869 6768 
+ 1431      00
+ 1432               	.LASF57:
+ 1433 00e4 2F56 6F6C 		.string	"/Volumes/Storage/Desktop/ps2/ps2avr_OK/source"
+ 1433      756D 6573 
+ 1433      2F53 746F 
+ 1433      7261 6765 
+ 1433      2F44 6573 
+ 1434               	.LASF5:
+ 1435 0112 6C6F 6E67 		.string	"long long int"
+ 1435      206C 6F6E 
+ 1435      6720 696E 
+ 1435      7400 
+GAS LISTING /var/tmp//ccuNnCCL.s 			page 35
+
+
+ 1436               	.LASF3:
+ 1437 0120 6C6F 6E67 		.string	"long int"
+ 1437      2069 6E74 
+ 1437      00
+ 1438               	.LASF45:
+ 1439 0129 7061 7269 		.string	"parity"
+ 1439      7479 00
+ 1440               	.LASF1:
+ 1441 0130 756E 7369 		.string	"unsigned char"
+ 1441      676E 6564 
+ 1441      2063 6861 
+ 1441      7200 
+ 1442               	.LASF54:
+ 1443 013e 7469 6D65 		.string	"timerAttach"
+ 1443      7241 7474 
+ 1443      6163 6800 
+ 1444               	.LASF0:
+ 1445 014a 7369 676E 		.string	"signed char"
+ 1445      6564 2063 
+ 1445      6861 7200 
+ 1446               	.LASF6:
+ 1447 0156 6C6F 6E67 		.string	"long long unsigned int"
+ 1447      206C 6F6E 
+ 1447      6720 756E 
+ 1447      7369 676E 
+ 1447      6564 2069 
+ 1448               	.LASF2:
+ 1449 016d 756E 7369 		.string	"unsigned int"
+ 1449      676E 6564 
+ 1449      2069 6E74 
+ 1449      00
+ 1450               	.LASF43:
+ 1451 017a 7478 5F62 		.string	"tx_byte"
+ 1451      7974 6500 
+ 1452               	.LASF51:
+ 1453 0182 636C 6F63 		.string	"clockHigh"
+ 1453      6B48 6967 
+ 1453      6800 
+ 1454               	.LASF19:
+ 1455 018c 5258 5F44 		.string	"RX_DATA3"
+ 1455      4154 4133 
+ 1455      00
+ 1456               	.LASF7:
+ 1457 0195 7368 6F72 		.string	"short unsigned int"
+ 1457      7420 756E 
+ 1457      7369 676E 
+ 1457      6564 2069 
+ 1457      6E74 00
+ 1458               	.LASF20:
+ 1459 01a8 5258 5F44 		.string	"RX_DATA4"
+ 1459      4154 4134 
+ 1459      00
+ 1460               	.LASF55:
+ 1461 01b1 474E 5520 		.string	"GNU C17 9.3.0 -mn-flash=1 -mno-skip-bug -mmcu=avr5 -g -Os"
+ 1461      4331 3720 
+ 1461      392E 332E 
+ 1461      3020 2D6D 
+GAS LISTING /var/tmp//ccuNnCCL.s 			page 36
+
+
+ 1461      6E2D 666C 
+ 1462               	.LASF9:
+ 1463 01eb 6368 6172 		.string	"char"
+ 1463      00
+ 1464               	.LASF26:
+ 1465 01f0 5258 5F53 		.string	"RX_SENT_ACK"
+ 1465      454E 545F 
+ 1465      4143 4B00 
+ 1466               	.LASF12:
+ 1467 01fc 4944 4C45 		.string	"IDLE_OK_TO_TX"
+ 1467      5F4F 4B5F 
+ 1467      544F 5F54 
+ 1467      5800 
+ 1468               	.LASF24:
+ 1469 020a 5258 5F50 		.string	"RX_PARITY"
+ 1469      4152 4954 
+ 1469      5900 
+ 1470               	.LASF42:
+ 1471 0214 7278 5F62 		.string	"rx_byte"
+ 1471      7974 6500 
+ 1472               	.LASF48:
+ 1473 021c 6461 7461 		.string	"dataLow"
+ 1473      4C6F 7700 
+ 1474               	.LASF36:
+ 1475 0224 5458 5F50 		.string	"TX_PARITY"
+ 1475      4152 4954 
+ 1475      5900 
+ 1476               	.LASF4:
+ 1477 022e 6C6F 6E67 		.string	"long unsigned int"
+ 1477      2075 6E73 
+ 1477      6967 6E65 
+ 1477      6420 696E 
+ 1477      7400 
+ 1478               	.LASF38:
+ 1479 0240 5458 5F41 		.string	"TX_AFTER_STOP"
+ 1479      4654 4552 
+ 1479      5F53 544F 
+ 1479      5000 
+ 1480               	.LASF44:
+ 1481 024e 7478 5F73 		.string	"tx_shift"
+ 1481      6869 6674 
+ 1481      00
+ 1482               	.LASF39:
+ 1483 0257 5458 5F45 		.string	"TX_END"
+ 1483      4E44 00
+ 1484               	.LASF47:
+ 1485 025e 6B62 645F 		.string	"kbd_init"
+ 1485      696E 6974 
+ 1485      00
+ 1486               	.LASF27:
+ 1487 0267 5258 5F45 		.string	"RX_END"
+ 1487      4E44 00
+ 1488               	.LASF25:
+ 1489 026e 5258 5F53 		.string	"RX_STOP"
+ 1489      544F 5000 
+ 1490               	.LASF61:
+ 1491 0276 6B62 645F 		.string	"kbd_get_rx_char"
+GAS LISTING /var/tmp//ccuNnCCL.s 			page 37
+
+
+ 1491      6765 745F 
+ 1491      7278 5F63 
+ 1491      6861 7200 
+ 1492               	.LASF53:
+ 1493 0286 7469 6D65 		.string	"timer2SetPrescaler"
+ 1493      7232 5365 
+ 1493      7450 7265 
+ 1493      7363 616C 
+ 1493      6572 00
+ 1494               	.LASF16:
+ 1495 0299 5258 5F44 		.string	"RX_DATA0"
+ 1495      4154 4130 
+ 1495      00
+ 1496               	.LASF17:
+ 1497 02a2 5258 5F44 		.string	"RX_DATA1"
+ 1497      4154 4131 
+ 1497      00
+ 1498               	.LASF18:
+ 1499 02ab 5258 5F44 		.string	"RX_DATA2"
+ 1499      4154 4132 
+ 1499      00
+ 1500               	.LASF59:
+ 1501 02b4 656E 756D 		.string	"enum_state"
+ 1501      5F73 7461 
+ 1501      7465 00
+ 1502               	.LASF10:
+ 1503 02bf 4944 4C45 		.string	"IDLE_START"
+ 1503      5F53 5441 
+ 1503      5254 00
+ 1504               	.LASF21:
+ 1505 02ca 5258 5F44 		.string	"RX_DATA5"
+ 1505      4154 4135 
+ 1505      00
+ 1506               	.LASF22:
+ 1507 02d3 5258 5F44 		.string	"RX_DATA6"
+ 1507      4154 4136 
+ 1507      00
+ 1508               	.LASF23:
+ 1509 02dc 5258 5F44 		.string	"RX_DATA7"
+ 1509      4154 4137 
+ 1509      00
+ 1510               		.ident	"GCC: (Homebrew AVR GCC 9.3.0_3) 9.3.0"
+ 1511               	.global __do_clear_bss
+GAS LISTING /var/tmp//ccuNnCCL.s 			page 38
+
+
+DEFINED SYMBOLS
+                            *ABS*:0000000000000000 keysta.c
+/var/tmp//ccuNnCCL.s:2      *ABS*:000000000000003e __SP_H__
+/var/tmp//ccuNnCCL.s:3      *ABS*:000000000000003d __SP_L__
+/var/tmp//ccuNnCCL.s:4      *ABS*:000000000000003f __SREG__
+/var/tmp//ccuNnCCL.s:5      *ABS*:0000000000000000 __tmp_reg__
+/var/tmp//ccuNnCCL.s:6      *ABS*:0000000000000001 __zero_reg__
+/var/tmp//ccuNnCCL.s:11     .text:0000000000000000 clockHigh
+/var/tmp//ccuNnCCL.s:31     .text:0000000000000006 clockLow
+/var/tmp//ccuNnCCL.s:50     .text:000000000000000c dataHigh
+/var/tmp//ccuNnCCL.s:69     .text:0000000000000012 dataLow
+/var/tmp//ccuNnCCL.s:88     .text:0000000000000018 timerAction
+                            *COM*:0000000000000001 kbd_state
+                            *COM*:0000000000000001 kbd_flags
+/var/tmp//ccuNnCCL.s:605    .bss:0000000000000003 rx_byte
+                             .bss:0000000000000000 parity
+/var/tmp//ccuNnCCL.s:601    .bss:0000000000000001 tx_shift
+/var/tmp//ccuNnCCL.s:603    .bss:0000000000000002 tx_byte
+/var/tmp//ccuNnCCL.s:476    .text:0000000000000212 kbd_init
+/var/tmp//ccuNnCCL.s:521    .text:000000000000023e kbd_set_tx
+/var/tmp//ccuNnCCL.s:566    .text:000000000000025c kbd_get_rx_char
+
+UNDEFINED SYMBOLS
+timer2Init
+timer2SetPrescaler
+timerAttach
+__do_clear_bss

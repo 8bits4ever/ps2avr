@@ -1,0 +1,8 @@
+Refer http://www.dribin.org/dave/keyboard/one_html/ to form a circuit.
+
+APPENDIX 1. Avrdude Script
+
+	avrdude -c stk500v2 -P com3 -p atmega16 -U hfuse:w:0xD7:m -U lfuse:w:0x0E:m
+	avrdude -c stk500v2 -P com3 -p atmega16 -U flash:w:keymain.hex:i
+
+	Please change [stk500v2], [com3] with your isp-loader preference.
